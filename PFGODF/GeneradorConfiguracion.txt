@@ -1,0 +1,25 @@
+ *****************************************************************
+ *			Ajustes generales			*
+  *****************************************************************
+           	    Archivo de plantilla               = plantilla.odt
+						Archivo del banco de preguntas= bancotemporal.odt
+		Directorio para guardar los exámenes = aqui           
+
+*****************************************************************
+*			Ajustes de exámen			*
+*****************************************************************
+Número de versiones                   =      2
+Temas a incluir (separados por comas) =  1,2,5,4 ,6, 7  ,8  
+Número de preguntas                   = 10
+Número de preguntas permitidas en el mismo lugar = 0
+Número de respuestas permitidas en el mismo lugar = 0
+
+*****************************************************************
+*		     Adaptaciones especiales			*
+*****************************************************************
+Dificultad adaptada =   si
+Dificultad adaptada mínima= 60
+Dificultad adaptada máxima  =70
+Tamaño variable de letra si/no = Si
+Tamaño mínimo de letra = 9
+Tamaño máximo de letra  = 15
