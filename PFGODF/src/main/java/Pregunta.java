@@ -1,18 +1,25 @@
-import org.odftoolkit.odfdom.pkg.OdfElement;
 
 import java.util.ArrayList;
 
 public class Pregunta {
-    private OdfElement contenido;
-
+    private String texto;
+    private String nombreDeEstilo;
     private ArrayList<Respuesta> respuestasDePregunta;
 
-    public OdfElement getContenido() {
-        return contenido;
+    public String getTexto() {
+        return texto;
     }
 
-    public void setContenido(OdfElement contenido) {
-        this.contenido = contenido;
+    public void setTexto(String texto) {
+        this.texto = texto;
+    }
+
+    public String getNombreDeEstilo() {
+        return nombreDeEstilo;
+    }
+
+    public void setNombreDeEstilo(String nombreDeEstilo) {
+        this.nombreDeEstilo = nombreDeEstilo;
     }
 
     public ArrayList<Respuesta> getRespuestasDePregunta() {

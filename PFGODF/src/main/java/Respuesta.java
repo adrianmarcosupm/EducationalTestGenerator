@@ -1,4 +1,7 @@
 public class Respuesta {
+    private String texto;
+    private String nombreDeEstilo;
+
     public String getTexto() {
         return texto;
     }
@@ -7,5 +10,11 @@ public class Respuesta {
         this.texto = texto;
     }
 
-    private String texto;
+    public String getNombreDeEstilo() {
+        return nombreDeEstilo;
+    }
+
+    public void setNombreDeEstilo(String nombreDeEstilo) {
+        this.nombreDeEstilo = nombreDeEstilo;
+    }
 }
