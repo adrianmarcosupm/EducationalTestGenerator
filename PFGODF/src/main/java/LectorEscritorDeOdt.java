@@ -10,13 +10,14 @@ import org.w3c.dom.NodeList;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 
 
 public class LectorEscritorDeOdt {
 
     OdfTextDocument documentoOdt;
 
-    // Los tags se envian como regex, así que hay que utilizar caracteres de escape.
+    // Los tags se envian como regex en algunos métodos, así que hay que utilizar caracteres de escape.
     private final String tagVersion = "\\{\\{\\¡VERSION\\¡\\}\\}";
     private final String tagPregunta = "\\{\\{\\¡PREGUNTA\\¡\\}\\}";
     private final String tagRespuestas = "\\{\\{\\¡RESPUESTAS\\¡\\}\\}";
@@ -40,6 +41,9 @@ public class LectorEscritorDeOdt {
     }
 
     public ArrayList<Pregunta> obtenerPreguntas(ArrayList<Integer> numerosDePregunta) {
+        // Borramos las barras de las etiquetas
+        String tagPNoRegex = tagPregunta.replace("\\", "");
+        String tagRNoRegex = tagRespuestas.replace("\\", "");
 
         ArrayList<Pregunta> preguntasReturn = new ArrayList<>(); // La lista de preguntas que devolvemos al generador
         Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
@@ -68,11 +72,12 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        lineaLeida = parrafo.getTextContent().trim();
-                        if (lineaLeida.equals(tagPregunta)) {
+                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
+                        if (lineaLeida.equals(tagPNoRegex)) {
                             exito = true;
                             sigueBuscando = false;
-                        } else if (lineaLeida.equals(tagRespuestas)) {
+                        } else if (lineaLeida.equals(tagRNoRegex)) {
                             logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
                         }
                     }
@@ -88,9 +93,10 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        lineaLeida = parrafo.getTextContent().trim();
+                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                            if (lineaLeida.equals(tagPregunta)) {
+                            if (lineaLeida.equals(tagPNoRegex)) {
                                 if (textoEncontrado) {
                                     logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
                                     exito = false;
@@ -98,7 +104,7 @@ public class LectorEscritorDeOdt {
                                 } else {
                                     logger.warn("Varias etiquetas PREGUNTA seguidas");
                                 }
-                            } else if (lineaLeida.equals(tagRespuestas)) {
+                            } else if (lineaLeida.equals(tagRNoRegex)) {
                                 ////////////////////////////////
                                 // Tag de RESPUESTAS encontrado
                                 if (!textoEncontrado) {
@@ -125,29 +131,27 @@ public class LectorEscritorDeOdt {
                 exito = false;
                 sigueBuscando = true;
                 textoEncontrado = false;
-                int contadorDeRespuestas = 0; //TODO: Para debugear
                 for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        lineaLeida = parrafo.getTextContent().trim();
+                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                            if (lineaLeida.equals(tagPregunta)) {
+                            if (lineaLeida.equals(tagPNoRegex)) {
                                 if (!textoEncontrado) {
                                     logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
                                 }
                                 sigueBuscando = false;
-                            } else if (lineaLeida.equals(tagRespuestas)) {
+                            } else if (lineaLeida.equals(tagRNoRegex)) {
                                 if (!textoEncontrado) {
                                     logger.warn("Varias etiquetas RESPUESTAS seguidas");
                                 } else {
                                     logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getTextos().get(0));
                                 }
                             } else {
-                                contadorDeRespuestas++; //TODO: para debug
                                 respuestaTemp = new Respuesta(lineaLeida, parrafo.getStyleName());
                                 preguntaTemp.getRespuestasDePregunta().add(respuestaTemp);
-                                logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + respuestaTemp.getTexto());
                                 textoEncontrado = true;
                                 exito = true;
                             }
@@ -158,14 +162,29 @@ public class LectorEscritorDeOdt {
                     return null;
                 }
 
-                // Si hemos encotrado la ultima respuesta (vienen en orden de menor a mayor)
-                // Enviamos las preguntas al generador y no seguimos buscando
-                if (numerosDePregunta.getLast().equals(contadorDePreguntas)) {
-                    exito = true;
-                } else {
+                contadorDePreguntas++;
+
+                // Si la pregunta encontrada esta en la lista de las que queremos, la añadimos
+                if (numerosDePregunta.contains(contadorDePreguntas)) {
+                    int contadorDeRespuestas = 1; //TODO: Para debugear
+                    preguntasReturn.add(preguntaTemp);
+                    logger.debug("Pregunta añadida " + contadorDePreguntas + ": " + preguntaTemp.getTextos().get(0));
+                    for (Respuesta r : preguntaTemp.getRespuestasDePregunta()) {
+                        logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTexto());
+                        contadorDeRespuestas++; //TODO: para debug
+                    }
+
+                }
+
+                // Si no hemos encotrado la ultima pregunta, seguimos buscando
+                if (!Collections.max(numerosDePregunta).equals(contadorDePreguntas)) {
                     sigueBuscando = true;
                     textoEncontrado = false;
                     exito = false;
+                    // Hemos encontrado un tag de pregunta asi que lo volvemos a buscar para comenzar la busqueda
+                    if (indexNodo != nodeTextPList.getLength()) {
+                        indexNodo--;
+                    }
                 }
             }
 //            return preguntasReturn;

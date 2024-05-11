@@ -135,7 +135,7 @@ public class Generador {
 
         //TODO: terminar algoritmo para mezclar preguntas
 
-        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
+//        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
         LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
         ArrayList<Pregunta> preguntasParaMezclar = new ArrayList<>(); // Donde guardamos las preguntas para mezclarlas
@@ -143,12 +143,15 @@ public class Generador {
         //TODO: obtenemos numeros aleatorios entre (1 y numero de Preguntas del banco de preguntas) (en este ejemplo son 15)
         // sacamos esas preguntas del banco de preguntas
         int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas();
-        ArrayList<Integer> preguntasACoger = new ArrayList<Integer>();
-        for (int i = 2; i < 12; i++) { //obtenemos 10 preguntas de ejemplo, de la 2 a la 11
+        ArrayList<Integer> preguntasACoger = new ArrayList<>();
+        for (int i = 2; i < numPreguntasDelBanco; i = i + 2) { //obtenemos preguntas de ejemplo de la 2 y de 2 en 2
             preguntasACoger.add(i);
         }
-
+        // obtenemos esas preguntas del banco
         preguntasParaMezclar = parseadorBanco.obtenerPreguntas(preguntasACoger);
+        if (preguntasParaMezclar == null) {
+            return; // error
+        }
 
         // TODO: calculamos el numero de versiones (min( factorial(preguntas), factorial(respuestas) )
 
@@ -156,10 +159,10 @@ public class Generador {
         // Mezclamos las respuestas de manera que no se repita ninguna en ninguna version (  ""  )
 
         // TODO: guardamos el examen con la version y las preguntas
-        logger.info(lineaDeGuiones);
-        logger.info("Guardando exámenes");
-        logger.info(lineaDeGuiones);
-        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
+//        logger.info(lineaDeGuiones);
+//        logger.info("Guardando exámenes");
+//        logger.info(lineaDeGuiones);
+//        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
     }
 
     // Convierte los si en true y el resto en false
