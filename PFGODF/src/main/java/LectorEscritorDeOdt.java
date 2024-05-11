@@ -39,211 +39,136 @@ public class LectorEscritorDeOdt {
         }
     }
 
-    private Pregunta obtenerPregunta(int indexNodo, org.w3c.dom.NodeList nodeTextPList) {
-        boolean sigueBuscando = true; // Para salir de los bucles
-        boolean textoEncontrado = false; // Para elegir caminos diferentes en los bucles
-        boolean exito = false; // Para continuar con la funcion de obtener pregunta
-        Node nodo; // El nodo XML
-        Pregunta preguntaReturn = null; // Guardamos la pregunta que encontramos para devolverla
-        OdfTextParagraph parrafo; // Tratamos el nodo como un parrafo
-        String lineaLeida = ""; // La linea del documento .odt que leemos
-
-        /////////////////////////////////////////////////////////////
-        // Recorremos todos los nodos text:p para buscar TAG PREGUNTA
-        for (indexNodo = 0; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-            nodo = nodeTextPList.item(indexNodo);
-            if (nodo instanceof OdfTextParagraph) {
-                parrafo = (OdfTextParagraph) nodo;
-                lineaLeida = parrafo.getTextContent().trim();
-                if (lineaLeida.equals(tagPregunta)) {
-                    exito = true;
-                    sigueBuscando = false;
-                }
-            }
-        }
-        if (!exito)
-            return null;
-        ////////////////////////////////////
-        // Buscamos el texto de la pregunta
-        exito = false;
-        sigueBuscando = true;
-        for (indexNodo = indexNodo + 1; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-            nodo = nodeTextPList.item(indexNodo);
-            if (nodo instanceof OdfTextParagraph) {
-                parrafo = (OdfTextParagraph) nodo;
-                lineaLeida = parrafo.getTextContent().trim();
-                if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                    if (lineaLeida.equals(tagPregunta)) {
-                        if (textoEncontrado) {
-                            logger.error("Pregunta sin respuestas: " + preguntaReturn.getTexto());
-                            sigueBuscando = false;
-                        } else {
-                            logger.warn("Varias etiquetas PREGUNTA seguidas");
-                        }
-                    } else if (lineaLeida.equals(tagRespuestas)) {
-                        if (!textoEncontrado) {
-                            logger.error("No se ha encontrado texto para una pregunta.");
-                        }
-                        sigueBuscando = false;
-                    } else {
-                        if (textoEncontrado == false) {
-                            preguntaReturn = new Pregunta();
-                        }
-                        preguntaReturn.getTexto().add(lineaLeida);
-                        preguntaReturn.getNombreDeEstilo().add(parrafo.getStyleName());
-
-                        textoEncontrado = true;
-                        exito = true;
-                    }
-                }
-            }
-        }
-        if (!exito)
-            return null;
-        //////////////////////////
-        // Buscamos TAG RESPUESTA
-        exito = false;
-        sigueBuscando = true;
-        textoEncontrado = false;
-        for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-            nodo = nodeTextPList.item(indexNodo);
-            if (nodo instanceof OdfTextParagraph) {
-                parrafo = (OdfTextParagraph) nodo;
-                lineaLeida = parrafo.getTextContent().trim();
-                if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                    if (lineaLeida.equals(tagPregunta)) {
-                        if (textoEncontrado) {
-                            indexNodo--; // Preparamos el nodo para el siguiente paso
-                        } else {
-                            logger.error("No se han encontrado respuestas para la pregunta: " + preguntaReturn.getTexto()); //TODO: ver si podemos imprimir la pregunta y en las demas warning error tambien
-                        }
-                        sigueBuscando = false;
-                        logger.warn("Varias etiquetas PREGUNTA seguidas");
-                    } else if (lineaLeida.equals(tagRespuestas)) {
-                        if (!textoEncontrado) {
-                            logger.warn("Varias etiquetas RESPUESTAS seguidas");
-                        } else {
-
-                            indexNodo--; // Preparamos el nodo para el siguiente paso
-                        }
-                        sigueBuscando = false;
-                    } else {
-                        preguntaReturn.getTexto().add(lineaLeida);
-                        preguntaReturn.getNombreDeEstilo().add(parrafo.getStyleName());
-
-                        textoEncontrado = true;
-                        exito = true;
-                    }
-                }
-            }
-        }
-
-        return preguntaReturn;
-    }
-
     public ArrayList<Pregunta> obtenerPreguntas(ArrayList<Integer> numerosDePregunta) {
-
 
         ArrayList<Pregunta> preguntasReturn = new ArrayList<>(); // La lista de preguntas que devolvemos al generador
         Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
+        Respuesta respuestaTemp = null; // Guardamos la respuesta que encontramos para añadirla a la lista de respuestas
 
         boolean sigueBuscando = true; // Para salir de los bucles
         boolean textoEncontrado = false; // Para elegir caminos diferentes en los bucles
         boolean exito = false; // Para continuar con la funcion de obtener pregunta
+
         Node nodo; // El nodo XML
         OdfTextParagraph parrafo; // Tratamos el nodo como un parrafo
         int indexNodo = 0; // Numero de nodo por el que empieza la busqueda
         String lineaLeida = ""; // La linea del documento .odt que leemos
-
-        int countP = 0; // Todo: Para debugear
+        int contadorDePreguntas = 0; // Para numerar las preguntas del banco
 
         try {
             documentoOdt = OdfTextDocument.loadDocument(fileArchivoALeerOdt);
             NodeList nodeTextPList = documentoOdt.getContentRoot().getElementsByTagName("text:p"); // Buscamos nodos XML con esta etiqueta
-
-
-            /////////////////////////////////////////////////////////////
-            // Recorremos todos los nodos text:p para buscar TAG PREGUNTA
-            for (indexNodo = 0; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-                nodo = nodeTextPList.item(indexNodo);
-                if (nodo instanceof OdfTextParagraph) {
-                    parrafo = (OdfTextParagraph) nodo;
-                    lineaLeida = parrafo.getTextContent().trim();
-                    if (lineaLeida.equals(tagPregunta)) {
-                        exito = true;
-                        sigueBuscando = false;
-                    } else if (lineaLeida.equals(tagRespuestas)) {
-                        logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // Recorremos todos los nodos del documento hasta que no queden más o hasta que encontremos las preguntas
+            // que hay en numerosDePregunta
+            while ((indexNodo < nodeTextPList.getLength()) && !exito) {
+                /////////////////////////////////////////////////////////////
+                // Recorremos todos los nodos text:p para buscar TAG PREGUNTA
+                for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
+                    nodo = nodeTextPList.item(indexNodo);
+                    if (nodo instanceof OdfTextParagraph) {
+                        parrafo = (OdfTextParagraph) nodo;
+                        lineaLeida = parrafo.getTextContent().trim();
+                        if (lineaLeida.equals(tagPregunta)) {
+                            exito = true;
+                            sigueBuscando = false;
+                        } else if (lineaLeida.equals(tagRespuestas)) {
+                            logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
+                        }
                     }
                 }
-            }
-            if (!exito)
-                return null;
-            ////////////////////////////////////
-            // Buscamos el texto de la pregunta
-            exito = false;
-            sigueBuscando = true;
-            for (indexNodo = indexNodo + 1; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-                nodo = nodeTextPList.item(indexNodo);
-                if (nodo instanceof OdfTextParagraph) {
-                    parrafo = (OdfTextParagraph) nodo;
-                    lineaLeida = parrafo.getTextContent().trim();
-                    if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                        if (lineaLeida.equals(tagPregunta)) {
-                            if (textoEncontrado) {
-                                logger.error("Pregunta sin respuestas: " + preguntaTemp.getTexto().get(0));
+                if (!exito) {
+                    return null;
+                }
+                ////////////////////////////////////
+                // Buscamos el texto de la pregunta
+                exito = false;
+                sigueBuscando = true;
+                for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
+                    nodo = nodeTextPList.item(indexNodo);
+                    if (nodo instanceof OdfTextParagraph) {
+                        parrafo = (OdfTextParagraph) nodo;
+                        lineaLeida = parrafo.getTextContent().trim();
+                        if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
+                            if (lineaLeida.equals(tagPregunta)) {
+                                if (textoEncontrado) {
+                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
+                                    exito = false;
+                                    sigueBuscando = false;
+                                } else {
+                                    logger.warn("Varias etiquetas PREGUNTA seguidas");
+                                }
+                            } else if (lineaLeida.equals(tagRespuestas)) {
+                                ////////////////////////////////
+                                // Tag de RESPUESTAS encontrado
+                                if (!textoEncontrado) {
+                                    logger.error("No se ha encontrado texto para una pregunta.");
+                                }
                                 sigueBuscando = false;
                             } else {
-                                logger.warn("Varias etiquetas PREGUNTA seguidas");
+                                if (textoEncontrado == false) {
+                                    preguntaTemp = new Pregunta();
+                                }
+                                preguntaTemp.getTextos().add(lineaLeida);
+                                preguntaTemp.getNombreDeEstilos().add(parrafo.getStyleName());
+                                textoEncontrado = true;
+                                exito = true;
                             }
-                        } else if (lineaLeida.equals(tagRespuestas)) {
-                            if (!textoEncontrado) {
-                                logger.error("No se ha encontrado texto para una pregunta.");
-                            }
-                            sigueBuscando = false;
-                        } else {
-                            if (textoEncontrado == false) {
-                                preguntaTemp = new Pregunta();
-                            }
-                            preguntaTemp.getTexto().add(lineaLeida);
-                            preguntaTemp.getNombreDeEstilo().add(parrafo.getStyleName());
-                            textoEncontrado = true;
-                            exito = true;
                         }
                     }
                 }
-            }
-            if (!exito)
-                return null;
-            //////////////////////////
-            // Buscamos TAG RESPUESTA
-            exito = false;
-            sigueBuscando = true;
-            textoEncontrado = false;
-            for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
-                nodo = nodeTextPList.item(indexNodo);
-                if (nodo instanceof OdfTextParagraph) {
-                    parrafo = (OdfTextParagraph) nodo;
-                    lineaLeida = parrafo.getTextContent().trim();
-                    if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
-                        if (lineaLeida.equals(tagPregunta)) {
-                            logger.error("No se han encontrado respuestas para la pregunta: " + preguntaTemp.getTexto().get(0)); //TODO: ver si podemos imprimir la pregunta y en las demas warning error tambien
-                            sigueBuscando = false;
-                        } else if (lineaLeida.equals(tagRespuestas)) {
-                            exito = true;
-                            sigueBuscando = false;
-                        } else {
-                            preguntaTemp.getTexto().add(lineaLeida);
-                            preguntaTemp.getNombreDeEstilo().add(parrafo.getStyleName());
-
-                            textoEncontrado = true;
-                            exito = true;
+                if (!exito) {
+                    return null;
+                }
+                ////////////////////////////////////
+                // Buscamos texto de las respuestas
+                exito = false;
+                sigueBuscando = true;
+                textoEncontrado = false;
+                int contadorDeRespuestas = 0; //TODO: Para debugear
+                for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
+                    nodo = nodeTextPList.item(indexNodo);
+                    if (nodo instanceof OdfTextParagraph) {
+                        parrafo = (OdfTextParagraph) nodo;
+                        lineaLeida = parrafo.getTextContent().trim();
+                        if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
+                            if (lineaLeida.equals(tagPregunta)) {
+                                if (!textoEncontrado) {
+                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
+                                }
+                                sigueBuscando = false;
+                            } else if (lineaLeida.equals(tagRespuestas)) {
+                                if (!textoEncontrado) {
+                                    logger.warn("Varias etiquetas RESPUESTAS seguidas");
+                                } else {
+                                    logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getTextos().get(0));
+                                }
+                            } else {
+                                contadorDeRespuestas++; //TODO: para debug
+                                respuestaTemp = new Respuesta(lineaLeida, parrafo.getStyleName());
+                                preguntaTemp.getRespuestasDePregunta().add(respuestaTemp);
+                                logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + respuestaTemp.getTexto());
+                                textoEncontrado = true;
+                                exito = true;
+                            }
                         }
                     }
                 }
-            }
+                if (!exito) {
+                    return null;
+                }
 
-            return preguntaReturn;
+                // Si hemos encotrado la ultima respuesta (vienen en orden de menor a mayor)
+                // Enviamos las preguntas al generador y no seguimos buscando
+                if (numerosDePregunta.getLast().equals(contadorDePreguntas)) {
+                    exito = true;
+                } else {
+                    sigueBuscando = true;
+                    textoEncontrado = false;
+                    exito = false;
+                }
+            }
+//            return preguntasReturn;
 
 
             // Buscamos el tag de pregunta el numero de veces
@@ -261,32 +186,30 @@ public class LectorEscritorDeOdt {
 //                preguntaTemp.setContenido(parrafo);
 
 
-            do {
-                pregunta = obtenerPregunta(0, nodeTextPList, numerosDePregunta);
-                preguntasReturn.add(pregunta);
-                //TODO: para debug
-                countP++;
-                logger.debug("PREGUNTA " + countP);
-                logger.debug(lineaDeGuiones);
-                logger.debug("estilo: " + pregunta.getNombreDeEstilo());
-                logger.debug("texto: " + pregunta.getTexto());
-                logger.debug(lineaDeGuiones);
-            } while (pregunta != null);
-
-
-            if (!exito)
-                preguntasReturn = null;
-//                if (sourceParagraph != null) {
-//                    OdfTextParagraph destParagraph = nd.newParagraph();
-//                    destParagraph.setTextContent(sourceParagraph.getTextContent());
-//                }
-//            }
-//            logger.debug("Pregunta encontrada: " + numeroDePregunta);
-        } catch (
-                Exception ex) {
-            logger.
-
-                    error("Error obteniendo preguntas: " + ex.getMessage());
+//            do {
+//                pregunta = obtenerPregunta(0, nodeTextPList, numerosDePregunta);
+//                preguntasReturn.add(pregunta);
+//                //TODO: para debug
+//                countP++;
+//                logger.debug("PREGUNTA " + countP);
+//                logger.debug(lineaDeGuiones);
+//                logger.debug("estilo: " + pregunta.getNombreDeEstilo());
+//                logger.debug("texto: " + pregunta.getTexto());
+//                logger.debug(lineaDeGuiones);
+//            } while (pregunta != null);
+//
+//
+//            if (!exito)
+//                preguntasReturn = null;
+////                if (sourceParagraph != null) {
+////                    OdfTextParagraph destParagraph = nd.newParagraph();
+////                    destParagraph.setTextContent(sourceParagraph.getTextContent());
+////                }
+////            }
+////            logger.debug("Pregunta encontrada: " + numeroDePregunta);
+        } catch (Exception ex) {
+            logger.error("Error obteniendo preguntas: " + ex.getMessage());
+            preguntasReturn = null;
         }
 
         return preguntasReturn;

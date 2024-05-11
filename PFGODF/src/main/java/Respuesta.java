@@ -2,6 +2,11 @@ public class Respuesta {
     private String texto;
     private String nombreDeEstilo;
 
+    public Respuesta(String texto, String nombreDeEstilo) {
+        this.texto = texto;
+        this.nombreDeEstilo = nombreDeEstilo;
+    }
+
     public String getTexto() {
         return texto;
     }

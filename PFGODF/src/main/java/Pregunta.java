@@ -2,30 +2,30 @@
 import java.util.ArrayList;
 
 public class Pregunta {
-    private ArrayList<String> texto; // Puede contener varios parrafos
-    private ArrayList<String> nombreDeEstilo; // Puede contener varios estilos
+    private ArrayList<String> textos; // Puede contener varios parrafos
+    private ArrayList<String> nombreDeEstilos; // Puede contener varios estilos
     private ArrayList<Respuesta> respuestasDePregunta;
 
     public Pregunta() {
-        texto = new ArrayList<>();
-        nombreDeEstilo = new ArrayList<>();
+        textos = new ArrayList<>();
+        nombreDeEstilos = new ArrayList<>();
         respuestasDePregunta = new ArrayList<>();
     }
 
-    public ArrayList<String> getTexto() {
-        return texto;
+    public ArrayList<String> getTextos() {
+        return textos;
     }
 
-    public void setTexto(ArrayList<String> texto) {
-        this.texto = texto;
+    public void setTextos(ArrayList<String> textos) {
+        this.textos = textos;
     }
 
-    public ArrayList<String> getNombreDeEstilo() {
-        return nombreDeEstilo;
+    public ArrayList<String> getNombreDeEstilos() {
+        return nombreDeEstilos;
     }
 
-    public void setNombreDeEstilo(ArrayList<String> nombreDeEstilo) {
-        this.nombreDeEstilo = nombreDeEstilo;
+    public void setNombreDeEstilos(ArrayList<String> nombreDeEstilos) {
+        this.nombreDeEstilos = nombreDeEstilos;
     }
 
     public ArrayList<Respuesta> getRespuestasDePregunta() {
