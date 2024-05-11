@@ -1,8 +1,8 @@
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -132,29 +132,37 @@ public class Generador {
     }
 
     public void generar() {
-        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
-        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
-        ArrayList<Pregunta> preguntasTemp = new ArrayList<>();
-        ArrayList<Respuesta> respuestasTemp = new ArrayList<>();
-        int np = parseadorBanco.obtenerNumPreguntas();
-        // obtenemos numeros aleatorios entre 1 y 15 (hasta numPreguntas) (por ejemplo 10)
-        // sacamos esas preguntas del banco de preguntas
-        // calculamos el numero de versiones (min( factorial(preguntas), factorial(respuestas) )
-        // las mezclamos de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
-        // mezclamos las respuestas de manera que no se repita ninguna en ninguna version
-        // guardamos el examen con la version, las preguntas y las respuestas
+
         //TODO: terminar algoritmo para mezclar preguntas
-        ArrayList<Integer> preguntasACoger = new ArrayList<Integer>();
-        for (int i = 2; i < 12; i++) { //obtenemos 10 preguntas de ejemplo, de la 2 a la 11
+
+//        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
+        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
+
+        ArrayList<Pregunta> preguntasParaMezclar = new ArrayList<>(); // Donde guardamos las preguntas para mezclarlas
+
+        //TODO: obtenemos numeros aleatorios entre (1 y numero de Preguntas del banco de preguntas) (en este ejemplo son 15)
+        // sacamos esas preguntas del banco de preguntas
+        int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas();
+        ArrayList<Integer> preguntasACoger = new ArrayList<>();
+        for (int i = 2; i < numPreguntasDelBanco; i = i + 2) { //obtenemos preguntas de ejemplo de la 2 y de 2 en 2
             preguntasACoger.add(i);
         }
-        preguntasTemp = parseadorBanco.obtenerPreguntas(preguntasACoger);
+        // obtenemos esas preguntas del banco
+        preguntasParaMezclar = parseadorBanco.obtenerPreguntas(preguntasACoger);
+        if (preguntasParaMezclar == null) {
+            return; // error
+        }
 
+        // TODO: calculamos el numero de versiones (min( factorial(preguntas), factorial(respuestas) )
 
-        logger.info(lineaDeGuiones);
-        logger.info("Guardando exámenes");
-        logger.info(lineaDeGuiones);
-        parseadorPlantilla.guardarExamen("A", preguntasTemp, respuestasTemp);
+        //TODO: Mezclamos las preguntas de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
+        // Mezclamos las respuestas de manera que no se repita ninguna en ninguna version (  ""  )
+
+        // TODO: guardamos el examen con la version y las preguntas
+//        logger.info(lineaDeGuiones);
+//        logger.info("Guardando exámenes");
+//        logger.info(lineaDeGuiones);
+//        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
     }
 
     // Convierte los si en true y el resto en false
