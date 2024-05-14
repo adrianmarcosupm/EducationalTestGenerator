@@ -4,9 +4,11 @@ import org.apache.logging.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class Generador {
 
@@ -49,6 +51,8 @@ public class Generador {
     // Logger para mostrar mensajes al usuario
     private static final Logger logger = LogManager.getLogger();
     private static final String lineaDeGuiones = "------------------------------------------------------";
+    private static final char[] letrasDeVersiones = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+            'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 
     // Constructor por defecto
     public Generador() {
@@ -133,31 +137,74 @@ public class Generador {
 
     public void generar() {
 
-        //TODO: terminar algoritmo para mezclar preguntas
+        Random random = new Random();
 
-//        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
+//      LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
         LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
-        ArrayList<Pregunta> preguntasParaMezclar = new ArrayList<>(); // Donde guardamos las preguntas para mezclarlas
+        ArrayList<Pregunta> preguntasParaMezclar; // Donde guardamos las preguntas para mezclarlas
+        ArrayList<Integer> preguntasACoger = new ArrayList<>(); // La lista con los numeros de preguntas que vamos a querer
+        int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
-        //TODO: obtenemos numeros aleatorios entre (1 y numero de Preguntas del banco de preguntas) (en este ejemplo son 15)
-        // sacamos esas preguntas del banco de preguntas
-        int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas();
-        ArrayList<Integer> preguntasACoger = new ArrayList<>();
-        for (int i = 2; i < numPreguntasDelBanco; i = i + 2) { //obtenemos preguntas de ejemplo de la 2 y de 2 en 2
-            preguntasACoger.add(i);
+        // Generamos una secuencia de numeros entre 1 y las preguntas del banco, para seleccionar preguntas
+        for (int i = 0; i < numPreguntas; i++) {
+            // Añadimos la pregunta a la lista de preguntas que queremos
+            preguntasACoger.add(random.nextInt(1, numPreguntasDelBanco));
         }
-        // obtenemos esas preguntas del banco
+
+        // Obtenemos esas preguntas del banco de preguntas
         preguntasParaMezclar = parseadorBanco.obtenerPreguntas(preguntasACoger);
+
         if (preguntasParaMezclar == null) {
-            return; // error
+            return; // Los errores son mostrados antes de llegar aqui
         }
 
-        // TODO: calculamos el numero de versiones (min( factorial(preguntas), factorial(respuestas) )
+        // Para sacar el numero de versiones tenemos que saber cuantas respuestas tienen las preguntas
+        // No podemos suponer que todas tienen 4 porque si hay una con 3, no vamos a poder hacer las mismas versiones,
+        // así que nos quedamos con el mínimo valor.
+        int numeroMinRespuestas = 0; // Donde guardamos el numero de respuestas mínimo de las preguntas que hemos seleccionado
+        // Recorremos la lista de preguntas seleccionadas y miramos sus respuestas
+        for (int i = 0; i < preguntasParaMezclar.size(); i++) {
+            if (numeroMinRespuestas == 0) {
+                numeroMinRespuestas = preguntasParaMezclar.get(i).getRespuestasDePregunta().size();
+            } else {
+                if (preguntasParaMezclar.get(i).getRespuestasDePregunta().size() < numeroMinRespuestas) {
+                    numeroMinRespuestas = preguntasParaMezclar.get(i).getRespuestasDePregunta().size();
+                }
+            }
+        }
 
-        //TODO: Mezclamos las preguntas de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
+        try {
+            BigInteger numVersionesDiferentes = factorial(Math.min(preguntasParaMezclar.size(), numeroMinRespuestas));
+            logger.info("Las preguntas seleccionadas permiten un máximo de " + numVersionesDiferentes + " versiones diferentes.");
+            BigInteger numVersionesTemp = BigInteger.valueOf(numVersiones);
+            if (numVersiones > numVersionesDiferentes.intValue()) {
+                logger.error("Se han seleccionado preguntas que no permiten ese número de versiones.");
+            }
+        } catch (Exception e) {
+            logger.error("No se ha podido calcular el número de versiones máximo. " + e.getMessage());
+            return;
+        }
+
+        // Creamos un array de arrays que contienen los números candidatos en cada posición, para no volverlos a elegir.
+        ArrayList<ArrayList<Integer>> arrayCandidatosPreguntas = new ArrayList<>();
+        // Insertamos arrays para cada posición de pregunta
+        for (int i = 0; i < preguntasParaMezclar.size(); i++) {
+            arrayCandidatosPreguntas.add(new ArrayList<>());
+        }
+        // Rellenamos todas las arrays con los posibles valores
+        for (int i = 0; i < arrayCandidatosPreguntas.size(); i++) {
+            for (int i2 = 0; i2 < numPreguntas; i2++) {
+                arrayCandidatosPreguntas.get(i).add(i2);
+            }
+        }
+        // Comenzamos con la generación de versiones.
+        for (int i = 0; i < numVersiones; i++) {
+
+        }
+
         // Mezclamos las respuestas de manera que no se repita ninguna en ninguna version (  ""  )
-
+        //TODO: Mezclamos las preguntas de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
         // TODO: guardamos el examen con la version y las preguntas
 //        logger.info(lineaDeGuiones);
 //        logger.info("Guardando exámenes");
@@ -168,6 +215,18 @@ public class Generador {
     // Convierte los si en true y el resto en false
     private boolean getBoolean(String palabra) {
         return (palabra.trim().toLowerCase().equals("si"));
+    }
+
+    public BigInteger factorial(int n) {
+        if (n < 0) {
+            logger.error("El factorial debe ser mayor o igual a cero.");
+            return null;
+        }
+        BigInteger result = BigInteger.ONE;
+        for (int i = 2; i <= n; i++) {
+            result = result.multiply(BigInteger.valueOf(i));
+        }
+        return result;
     }
 
 }
