@@ -142,18 +142,28 @@ public class Generador {
 //      LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
         LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
+        ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
         ArrayList<Pregunta> preguntasParaMezclar; // Donde guardamos las preguntas para mezclarlas
         ArrayList<Integer> preguntasACoger = new ArrayList<>(); // La lista con los numeros de preguntas que vamos a querer
         int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
         // Generamos una secuencia de numeros entre 1 y las preguntas del banco, para seleccionar preguntas
+        // Para no coger repetidos
+        ArrayList<Integer> candidatos = new ArrayList<>();
+        for (int i = 1; i <= numPreguntas; i++) {
+            candidatos.add(i);
+        }
         for (int i = 0; i < numPreguntas; i++) {
             // Añadimos la pregunta a la lista de preguntas que queremos
-            preguntasACoger.add(random.nextInt(1, numPreguntasDelBanco));
+            int candidato = random.nextInt(0, candidatos.size());
+            preguntasACoger.add(candidatos.get(candidato));
+            candidatos.remove(candidato);
         }
+        logger.debug("Tamaño de pac: " + preguntasACoger.size());
 
         // Obtenemos esas preguntas del banco de preguntas
         preguntasParaMezclar = parseadorBanco.obtenerPreguntas(preguntasACoger);
+        logger.debug("Tamaño de ppm: " + preguntasParaMezclar.size());
 
         if (preguntasParaMezclar == null) {
             return; // Los errores son mostrados antes de llegar aqui
@@ -186,22 +196,109 @@ public class Generador {
             return;
         }
 
+        // Comenzamos con la generación del exámen.
+        Examen examenTemp;
+        // Para cada version
+        for (int indexExamen = 0; indexExamen < numVersiones; indexExamen++) {
+            examenTemp = new Examen();
+            examenTemp.setVersion(obtenerVersion(indexExamen, numVersiones));
+            logger.debug("Examen creado con version: " + examenTemp.getVersion());
+            ///////////////////////////
+            // Mezclamos las preguntas
+            // Creamos un array de arrays que contienen los números candidatos en cada posición, para no volverlos a elegir.
+            ArrayList<ArrayList<Integer>> arrayCandidatosPreguntas = new ArrayList<>();
+            // Insertamos arrays para cada posición de pregunta
+            for (int i = 0; i < preguntasParaMezclar.size(); i++) {
+                arrayCandidatosPreguntas.add(new ArrayList<>());
+            }
+            // Rellenamos todas las arrays con los posibles valores
+            for (int i = 0; i < arrayCandidatosPreguntas.size(); i++) {
+                for (int i2 = 0; i2 < numPreguntas; i2++) {
+                    arrayCandidatosPreguntas.get(i).add(i2);
+                }
+            }
+            for (int indexP = 0; indexP < arrayCandidatosPreguntas.size(); indexP++) {
+                int candidato = random.nextInt(0, arrayCandidatosPreguntas.get(indexP).size());
+                logger.debug("Candidatos en " + indexP + " : ");
+                // Para debug
+                String candidatosStr = "";
+                for (int a = 0; a < arrayCandidatosPreguntas.get(indexP).size(); a++) {
+                    candidatosStr = candidatosStr + arrayCandidatosPreguntas.get(indexP).get(a) + " ";
+                }
+                /////////////
+                logger.debug(candidatosStr);
+                logger.debug("Candidato seleccionado en " + indexP + " : " + candidato);
+                examenTemp.getPreguntas().add(preguntasParaMezclar.get(candidato));
+                logger.debug("Candidato seleccionado texto: " + preguntasParaMezclar.get(candidato).getTextos().get(0));
+                arrayCandidatosPreguntas.get(indexP).remove(candidato);
+                logger.debug("Candidatos despues en " + indexP + " : ");
+                // Para debug
+                candidatosStr = "";
+                for (int a = 0; a < arrayCandidatosPreguntas.get(indexP).size(); a++) {
+                    candidatosStr = candidatosStr + arrayCandidatosPreguntas.get(indexP).get(a) + " ";
+                }
+                logger.debug(candidatosStr);
+                /////////////
+            }
+
+            // Lo incluimos en la lista de exámenes generados.
+            examenes.add(examenTemp);
+        }
+
+        ////////////////////////////
+        // Mezclamos las respuestas
         // Creamos un array de arrays que contienen los números candidatos en cada posición, para no volverlos a elegir.
-        ArrayList<ArrayList<Integer>> arrayCandidatosPreguntas = new ArrayList<>();
+        ArrayList<ArrayList<Integer>> arrayCandidatosRespuestas = new ArrayList<>();
+        ArrayList<Respuesta> respuestasTemp; // Guardamos aqui las respuestas sin mezclar.
         // Insertamos arrays para cada posición de pregunta
-        for (int i = 0; i < preguntasParaMezclar.size(); i++) {
-            arrayCandidatosPreguntas.add(new ArrayList<>());
+        for (int i = 0; i < examenTemp.getPreguntas().size(); i++) {
+            arrayCandidatosRespuestas.add(new ArrayList<>());
         }
         // Rellenamos todas las arrays con los posibles valores
-        for (int i = 0; i < arrayCandidatosPreguntas.size(); i++) {
-            for (int i2 = 0; i2 < numPreguntas; i2++) {
-                arrayCandidatosPreguntas.get(i).add(i2);
+        for (int i = 0; i < arrayCandidatosRespuestas.size(); i++) {
+            for (int i2 = 0; i2 < examenTemp.getPreguntas().get(i).getRespuestasDePregunta().size(); i2++) {
+                arrayCandidatosRespuestas.get(i).add(i2);
             }
         }
-        // Comenzamos con la generación de versiones.
-        for (int i = 0; i < numVersiones; i++) {
-
+        for (int indexR = 0; indexR < arrayCandidatosRespuestas.size(); indexR++) {
+            int candidato = random.nextInt(0, arrayCandidatosRespuestas.get(indexR).size());
+            logger.debug("Candidatos en " + indexR + " : ");
+            // Para debug
+            String candidatosStr = "";
+            for (int a = 0; a < arrayCandidatosRespuestas.get(indexR).size(); a++) {
+                candidatosStr = candidatosStr + arrayCandidatosRespuestas.get(indexR).get(a) + " ";
+            }
+            /////////////
+            logger.debug(candidatosStr);
+            logger.debug("Candidato seleccionado en " + indexR + " : " + candidato);
+            examenTemp.getPreguntas().get(indexR).getRespuestasDePregunta().set(indexR, respuestasTemp.get(candidato));
+            logger.debug("Candidato seleccionado texto: " + preguntasParaMezclar.get(candidato).getTextos().get(0));
+            arrayCandidatosRespuestas.get(indexR).remove(candidato);
+            logger.debug("Candidatos despues en " + indexR + " : ");
+            // Para debug
+            candidatosStr = "";
+            for (int a = 0; a < arrayCandidatosRespuestas.get(indexR).size(); a++) {
+                candidatosStr = candidatosStr + arrayCandidatosRespuestas.get(indexR).get(a) + " ";
+            }
+            logger.debug(candidatosStr);
+            /////////////
         }
+
+        // Para debug
+        for (int i = 0; i < examenes.size(); i++) {
+            logger.debug(lineaDeGuiones);
+            logger.debug("Exámen " + i + " : ");
+            logger.debug("Version: " + examenes.get(i).getVersion());
+            logger.debug("Preguntas:");
+            for (int j = 0; j < examenes.get(i).getPreguntas().size(); j++) {
+                logger.debug("Pregunta " + j + " : " + examenes.get(i).getPreguntas().get(j).getTextos().get(0));
+                for (int k = 0; k < examenes.get(i).getPreguntas().get(j).getRespuestasDePregunta().size(); k++) {
+                    logger.debug("respuesta " + k + " : " + examenes.get(i).getPreguntas().get(j).getRespuestasDePregunta().get(k));
+                }
+            }
+        }
+        logger.debug(lineaDeGuiones);
+        /////////////
 
         // Mezclamos las respuestas de manera que no se repita ninguna en ninguna version (  ""  )
         //TODO: Mezclamos las preguntas de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
@@ -210,6 +307,58 @@ public class Generador {
 //        logger.info("Guardando exámenes");
 //        logger.info(lineaDeGuiones);
 //        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
+    }
+
+    // Mezcla las respuestas las preguntas
+    private mezclarExamenes(ArrayList<Examen> examenesParaMezclar)
+    {
+        // Es importante mezclar las respuestas y luego las preguntas en ese orden.
+    }
+
+    // Obtiene la letra de la version
+    private String obtenerVersion(int numero, int nvers) {
+        StringBuilder resultado = new StringBuilder();
+        // Si solo hay una letra de versión
+        if (letrasDeVersiones.length == 1) {
+            for (int i = 0; i < numero; i++) {
+                resultado.append(letrasDeVersiones[0]);
+            }
+            return resultado.toString();
+        }
+
+        // Si hay varias letras para la version
+        if (numero < letrasDeVersiones.length) {
+            return String.valueOf(letrasDeVersiones[numero]);
+        }
+
+        while (numero > 0) {
+            resultado.insert(0, letrasDeVersiones[numero % letrasDeVersiones.length]);
+            numero = numero / letrasDeVersiones.length;
+        }
+
+        while (resultado.length() < obtenerNumLetrasVersiones(nvers)) {
+            resultado.insert(0, letrasDeVersiones[0]);
+        }
+
+        return resultado.toString();
+    }
+
+    // Obtiene la longitud de la cadena de version
+    private int obtenerNumLetrasVersiones(int num) {
+        int numLetras = 1;
+        // Si solo hay una letra de version
+        if (letrasDeVersiones.length == 1) {
+            numLetras = num;
+        } else {
+            // Si hay varias letras para la version
+            while (num > letrasDeVersiones.length) {
+                numLetras++;
+                num = num / letrasDeVersiones.length;
+            }
+        }
+
+        logger.debug("Numero de letras para la version: " + numLetras);
+        return numLetras;
     }
 
     // Convierte los si en true y el resto en false
