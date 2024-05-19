@@ -4,7 +4,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -22,16 +21,12 @@ public class Generador {
 
 
     /* Ajustes de examen */
-    private int numVersiones;
-    private final String stringAjusteNumVersiones = "Número de versiones";
+    private int numMaxDeVersiones;
+    private final String stringAjusteNumMaxDeVersiones = "Número máximo de versiones";
     private ArrayList<Integer> temas = new ArrayList<>();
     private final String stringAjusteTemas = "Temas a incluir (separados por comas)";
     private int numPreguntas;
     private final String stringAjusteNumPreguntas = "Número de preguntas";
-    private int numPreguntasMismoLugar;
-    private final String stringAjusteNumPreguntasMismoLugar = "Número de preguntas permitidas en el mismo lugar";
-    private int numRespuestasMismoLugar;
-    private final String stringAjusteNumRespuestasMismoLugar = "Número de respuestas permitidas en el mismo lugar";
 
     /* Adaptaciones especiales */
     private boolean dificultadAdaptada;
@@ -79,18 +74,14 @@ public class Generador {
                         bancoDePreguntas = Paths.get(valor).toFile();
                     } else if (ajuste.equals(stringAjusteDirectorioSalida)) {
                         directorioSalida = Paths.get(valor);
-                    } else if (ajuste.equals(stringAjusteNumVersiones)) {
-                        numVersiones = Integer.parseInt(valor);
+                    } else if (ajuste.equals(stringAjusteNumMaxDeVersiones)) {
+                        numMaxDeVersiones = Integer.parseInt(valor);
                     } else if (ajuste.equals(stringAjusteTemas)) {
                         for (String tema : valor.split(",")) {
                             temas.add(Integer.parseInt(tema.strip()));
                         }
                     } else if (ajuste.equals(stringAjusteNumPreguntas)) {
                         numPreguntas = Integer.parseInt(valor);
-                    } else if (ajuste.equals(stringAjusteNumPreguntasMismoLugar)) {
-                        numPreguntasMismoLugar = Integer.parseInt(valor);
-                    } else if (ajuste.equals(stringAjusteNumRespuestasMismoLugar)) {
-                        numRespuestasMismoLugar = Integer.parseInt(valor);
                     } else if (ajuste.equals(stringAjusteDificultadAdaptada)) {
                         dificultadAdaptada = getBoolean(valor);
                     } else if (ajuste.equals(stringAjusteDificultadMinima)) {
@@ -120,12 +111,10 @@ public class Generador {
         logger.info(stringAjustePlantilla + " : " + plantilla);
         logger.info(stringAjusteBancoDePreguntas + " : " + bancoDePreguntas);
         logger.info(stringAjusteDirectorioSalida + " : " + directorioSalida);
-        logger.info(stringAjusteNumVersiones + " : " + numVersiones);
+        logger.info(stringAjusteNumMaxDeVersiones + " : " + numMaxDeVersiones);
         for (int i = 0; i < temas.size(); i++)
             logger.info(stringAjusteTemas + " : " + temas.get(i));
         logger.info(stringAjusteNumPreguntas + " : " + numPreguntas);
-        logger.info(stringAjusteNumPreguntasMismoLugar + " : " + numPreguntasMismoLugar);
-        logger.info(stringAjusteNumRespuestasMismoLugar + " : " + numPreguntasMismoLugar);
         logger.info(stringAjusteDificultadAdaptada + " : " + dificultadAdaptada);
         logger.info(stringAjusteDificultadMinima + " : " + dificultadMinima);
         logger.info(stringAjusteDificultadMaxima + " : " + dificultadMaxima);
@@ -184,34 +173,27 @@ public class Generador {
             }
         }
 
-        try {
-            BigInteger numVersionesDiferentes = factorial(Math.min(preguntasParaMezclar.size(), numeroMinRespuestas));
-            logger.info("Las preguntas seleccionadas permiten un máximo de " + numVersionesDiferentes + " versiones diferentes.");
-            if (preguntasParaMezclar.size() < numeroMinRespuestas) {
-                logger.info("Se permiten hasta " + numPreguntasMismoLugar + " preguntas en el mismo lugar.");
-                logger.info("Por lo que el número de versiones que tendrá el exámen es de: " + obtenerNumVersiones(numVersionesDiferentes, numPreguntasMismoLugar));
-            } else {
-                logger.info("Se permiten hasta " + numRespuestasMismoLugar + " respuestas en el mismo lugar.");
-                logger.info("Por lo que el número de versiones que tendrá el exámen es de: " + obtenerNumVersiones(numVersionesDiferentes, numRespuestasMismoLugar));
-            }
-            
-            if (numVersiones > numVersionesDiferentes.intValue()) {
-                logger.error("Se han seleccionado preguntas que no permiten ese número de versiones.");
-            }
-        } catch (Exception e) {
-            logger.error("No se ha podido calcular el número de versiones máximo. " + e.getMessage());
-            return;
+        int numVersionesDiferentes = Math.min(preguntasParaMezclar.size(), numeroMinRespuestas);
+        logger.info("Las preguntas seleccionadas permiten un máximo de " + numVersionesDiferentes + " versiones diferentes.");
+        logger.info("Has seleccionado un máximo de " + numMaxDeVersiones + " versiones diferentes.");
+        if (numMaxDeVersiones < numVersionesDiferentes) {
+            numVersionesDiferentes = numMaxDeVersiones;
         }
 
         ////////////////////////////////////////////////
         // Comenzamos con la generación de los exámenes
         Examen examenTemp;
+        Pregunta preguntaTemp;
+        Respuesta respuestaTemp;
         // Para cada version
-        for (int indexExamen = 0; indexExamen < numVersiones; indexExamen++) {
+        for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
             examenTemp = new Examen();
-            examenTemp.setVersion(obtenerVersion(indexExamen, numVersiones));
+            examenTemp.setVersion(obtenerVersion(indexExamen, numVersionesDiferentes));
             logger.debug("Examen creado con version: " + examenTemp.getVersion());
-            examenTemp.setPreguntas(preguntasParaMezclar);
+            for (Pregunta p : preguntasParaMezclar) {
+                examenTemp.getPreguntas().add(p.obtenerCopiaRecursiva());
+            }
+
             // Lo incluimos en la lista de exámenes generados.
             examenes.add(examenTemp);
         }
@@ -244,9 +226,6 @@ public class Generador {
 //        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
     }
 
-    private BigInteger obtenerNumVersiones(BigInteger n, int numLetrasPermitidas) {
-
-    }
 
     // Mezcla las respuestas y las preguntas
     private void mezclarExamenes(ArrayList<Examen> examenesParaMezclar) {
@@ -254,6 +233,8 @@ public class Generador {
         // Es importante mezclar las respuestas y luego las preguntas en ese orden.
         // Creamos un array que rellenaremos con las posibles versiones de orden de las preguntas o de las respuestas
         ArrayList<Integer> numVersionesArr = new ArrayList<>();
+        int numDeVarianteIndex; // Index del array numVersionesArr
+        int numDeVariante; // Valor del elemento de numVersionesArr
         //////////////////////
         // Mezclar respuestas
         for (int indexP = 0; indexP < examenesParaMezclar.get(0).getPreguntas().size(); indexP++) {
@@ -263,8 +244,8 @@ public class Generador {
             }
             // Mezclamos esta pregunta en todos los examenes, cada uno con un orden diferente
             for (Examen e : examenesParaMezclar) {
-                int numDeVarianteIndex = random.nextInt(0, numVersionesArr.size() - 1);
-                int numDeVariante = numVersionesArr.get(numDeVarianteIndex);
+                numDeVarianteIndex = random.nextInt(0, numVersionesArr.size());
+                numDeVariante = numVersionesArr.get(numDeVarianteIndex);
                 numVersionesArr.remove(numDeVarianteIndex);
                 mezclarRespuestas(e.getPreguntas().get(indexP), numDeVariante);
             }
@@ -278,8 +259,8 @@ public class Generador {
         }
         // Mezclamos las preguntas en todos los examenes, cada uno con un orden diferente
         for (Examen e : examenesParaMezclar) {
-            int numDeVarianteIndex = random.nextInt(0, numVersionesArr.size());
-            int numDeVariante = numVersionesArr.get(numDeVarianteIndex);
+            numDeVarianteIndex = random.nextInt(0, numVersionesArr.size());
+            numDeVariante = numVersionesArr.get(numDeVarianteIndex);
             numVersionesArr.remove(numDeVarianteIndex);
             mezclarPreguntas(e, numDeVariante);
         }
@@ -372,18 +353,6 @@ public class Generador {
     // Convierte los si en true y el resto en false
     private boolean getBoolean(String palabra) {
         return (palabra.trim().toLowerCase().equals("si"));
-    }
-
-    public BigInteger factorial(int n) {
-        if (n < 0) {
-            logger.error("El factorial debe ser mayor o igual a cero.");
-            return null;
-        }
-        BigInteger result = BigInteger.ONE;
-        for (int i = 2; i <= n; i++) {
-            result = result.multiply(BigInteger.valueOf(i));
-        }
-        return result;
     }
 
 }
