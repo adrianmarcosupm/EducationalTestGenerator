@@ -7,6 +7,11 @@ public class Respuesta {
         this.nombreDeEstilo = nombreDeEstilo;
     }
 
+    public Respuesta() {
+        this.texto = "";
+        this.nombreDeEstilo = "";
+    }
+
     public String getTexto() {
         return texto;
     }
@@ -21,5 +26,10 @@ public class Respuesta {
 
     public void setNombreDeEstilo(String nombreDeEstilo) {
         this.nombreDeEstilo = nombreDeEstilo;
+    }
+
+    public Respuesta obtenerCopiaRecursiva() {
+        Respuesta resp = new Respuesta(this.getTexto(), this.getNombreDeEstilo());
+        return resp;
     }
 }

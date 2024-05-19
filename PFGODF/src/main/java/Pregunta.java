@@ -35,4 +35,19 @@ public class Pregunta {
     public void setRespuestasDePregunta(ArrayList<Respuesta> respuestasDePregunta) {
         this.respuestasDePregunta = respuestasDePregunta;
     }
+
+    public Pregunta obtenerCopiaRecursiva() {
+        Pregunta preg = new Pregunta();
+        for (int i = 0; i < this.getTextos().size(); i++) {
+            preg.getTextos().add(this.getTextos().get(i));
+        }
+        for (int i = 0; i < this.getNombreDeEstilos().size(); i++) {
+            preg.getNombreDeEstilos().add(this.getNombreDeEstilos().get(i));
+        }
+        for (int i = 0; i < this.getRespuestasDePregunta().size(); i++) {
+            preg.getRespuestasDePregunta().add(this.getRespuestasDePregunta().get(i).obtenerCopiaRecursiva());
+        }
+
+        return preg;
+    }
 }
