@@ -1,9 +1,17 @@
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.odftoolkit.odfdom.doc.OdfTextDocument;
+import org.odftoolkit.odfdom.dom.OdfContentDom;
+import org.odftoolkit.odfdom.dom.element.style.StyleStyleElement;
+import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
+import org.odftoolkit.odfdom.dom.style.props.OdfTextProperties;
+import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextParagraph;
+import org.odftoolkit.odfdom.incubator.doc.text.OdfTextSpan;
 import org.odftoolkit.odfdom.incubator.search.TextNavigation;
 import org.odftoolkit.odfdom.incubator.search.TextSelection;
+import org.odftoolkit.odfdom.pkg.OdfElement;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -11,6 +19,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 
 
 public class LectorEscritorDeOdt {
@@ -62,6 +71,13 @@ public class LectorEscritorDeOdt {
         try {
             documentoOdt = OdfTextDocument.loadDocument(fileArchivoALeerOdt);
             NodeList nodeTextPList = documentoOdt.getContentRoot().getElementsByTagName("text:p"); // Buscamos nodos XML con esta etiqueta
+            NodeList nodeTextPList2 = documentoOdt.getContentRoot().getElementsByTagName("text:span");
+            for (OdfStyle s : documentoOdt.getStylesDom().getAutomaticStyles().getAllStyles()){
+//                System.out.println(s.toString());
+            }
+            for (OdfStyle s : documentoOdt.getStylesDom().getOfficeStyles().getAllStyles()){
+//                System.out.println(s.toString());
+            }
             //////////////////////////////////////////////////////////////////////////////////////////////////////////
             // Recorremos todos los nodos del documento hasta que no queden más o hasta que encontremos las preguntas
             // que hay en numerosDePregunta
@@ -87,6 +103,23 @@ public class LectorEscritorDeOdt {
                 }
                 ////////////////////////////////////
                 // Buscamos el texto de la pregunta
+                nodo = nodeTextPList.item(indexNodo);
+                if (nodo instanceof OdfTextParagraph) {
+                    NodeList nl = nodo.getChildNodes();
+                    for (int i = 0; i < nl.getLength(); i++) {
+                        System.out.println(nl.item(i).getLocalName());
+                        System.out.println(nl.item(i).getNodeName());
+                        System.out.println(nl.item(i).getNodeType());
+                        System.out.println(nl.item(i).getNodeValue());
+                        System.out.println(nl.item(i).getTextContent());
+                        if (nl.item(i).getAttributes() != null)
+                        {
+                            System.out.println(nl.item(i).getAttributes().getNamedItem("text:style-name").getNodeValue());
+                        }
+
+                        System.out.println("----");
+                    }
+                }
                 exito = false;
                 sigueBuscando = true;
                 for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
@@ -116,7 +149,9 @@ public class LectorEscritorDeOdt {
                                     preguntaTemp = new Pregunta();
                                 }
                                 preguntaTemp.getTextos().add(lineaLeida);
-                                preguntaTemp.getNombreDeEstilos().add(parrafo.getStyleName());
+                                preguntaTemp.getNombreDeEstilos().add(parrafo.getTextStyleNameAttribute());
+                                preguntaTemp.getEstilos().add(parrafo.getOrCreateAutomaticStyles().getStyle(parrafo.getTextStyleNameAttribute(),OdfStyleFamily.Text));
+
                                 textoEncontrado = true;
                                 exito = true;
                             }
@@ -150,7 +185,7 @@ public class LectorEscritorDeOdt {
                                     logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getTextos().get(0));
                                 }
                             } else {
-                                respuestaTemp = new Respuesta(lineaLeida, parrafo.getStyleName());
+                                respuestaTemp = new Respuesta(lineaLeida, parrafo.getStyleName(), parrafo.getAutomaticStyle());
                                 preguntaTemp.getRespuestasDePregunta().add(respuestaTemp);
                                 textoEncontrado = true;
                                 exito = true;
@@ -187,45 +222,6 @@ public class LectorEscritorDeOdt {
                     }
                 }
             }
-//            return preguntasReturn;
-
-
-            // Buscamos el tag de pregunta el numero de veces
-//            TextNavigation search = new TextNavigation(tagPregunta, documentoOdt);
-
-//            while (search.hasNext() && contador < numeroDePregunta) {
-//                // Marcamos el texto como encontrado
-//                search.next();
-//                contador++;
-//            }
-            // El siguiente parrafo le copiamos
-//            if (search.hasNext()) {
-//                search.next().getIndex()
-//                parrafo = search.next().getContainerElement().getComponent().getChildren().get(0);
-//                preguntaTemp.setContenido(parrafo);
-
-
-//            do {
-//                pregunta = obtenerPregunta(0, nodeTextPList, numerosDePregunta);
-//                preguntasReturn.add(pregunta);
-//                //TODO: para debug
-//                countP++;
-//                logger.debug("PREGUNTA " + countP);
-//                logger.debug(lineaDeGuiones);
-//                logger.debug("estilo: " + pregunta.getNombreDeEstilo());
-//                logger.debug("texto: " + pregunta.getTexto());
-//                logger.debug(lineaDeGuiones);
-//            } while (pregunta != null);
-//
-//
-//            if (!exito)
-//                preguntasReturn = null;
-////                if (sourceParagraph != null) {
-////                    OdfTextParagraph destParagraph = nd.newParagraph();
-////                    destParagraph.setTextContent(sourceParagraph.getTextContent());
-////                }
-////            }
-////            logger.debug("Pregunta encontrada: " + numeroDePregunta);
         } catch (Exception ex) {
             logger.error("Error obteniendo preguntas: " + ex.getMessage());
             preguntasReturn = null;
@@ -257,31 +253,76 @@ public class LectorEscritorDeOdt {
         return numPreguntas;
     }
 
-    public void guardarExamen(String version, ArrayList<Pregunta> preguntas) {
+    public void guardarExamen(Examen e) {
 
         OdfTextDocument documentoOdt;
         File documentoExamen;
+        OdfContentDom dom;
         try {
-            documentoOdt = OdfTextDocument.loadDocument(fileArchivoALeerOdt);
-
+            documentoOdt = (OdfTextDocument) OdfTextDocument.loadDocument(fileArchivoALeerOdt);
+            dom = documentoOdt.getContentDom();
             // Reemplazamos el tag de la version
             TextNavigation search = new TextNavigation(tagVersion, documentoOdt);
             while (search.hasNext()) {
                 TextSelection selection = search.next();
-                selection.replaceWith(version);
+                selection.replaceWith(e.getVersion());
             }
             // Añadimos las preguntas
-            for (Pregunta p : preguntas) {
-                // TODO: añadir preguntas traidas ya mezcladas desde la clase Generador
+            for (Pregunta p : e.getPreguntas()) {
+                for (int i = 0; i < p.getTextos().size(); i++) {
+//                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
+                    StyleStyleElement targetStyle = documentoOdt.getStyleByName( OdfStyleFamily.Text,p.getNombreDeEstilos().get(i));
+                    if (targetStyle != null) {
+                        logger.debug(targetStyle.toString());
+                    }
+
+                    if (targetStyle == null) {
+
+                        // Crear el nuevo estilo en el documento destino si no existe
+                        targetStyle = documentoOdt.getOrCreateDocumentStyles().newStyle(p.getNombreDeEstilos().get(i), OdfStyleFamily.Text);
+
+                        // Copiar propiedades del estilo fuente al estilo destino
+                        targetStyle.setProperties(documentoOdt.getStyleByName( OdfStyleFamily.Text,p.getNombreDeEstilos().get(i)).getStylePropertiesDeep());
+                    }
+                    OdfTextParagraph par2 = documentoOdt.newParagraph(p.getTextos().get(i));
+
+                    par2.setStyleName(p.getNombreDeEstilos().get(i));
+//                    dom.getRootElement().appendChild(par);
+//                    documentoOdt.addText(t); funciona pero todo en el mismo parrafo
+//                    documentoOdt.newParagraph().addContent(t); funciona
+                }
+
+
+
+                for (Respuesta r : p.getRespuestasDePregunta()) {
+//                    OdfTextParagraph par = new OdfTextParagraph(dom, r.getNombreDeEstilo(),r.getTexto());
+                    OdfStyle targetStyle = documentoOdt.getOrCreateDocumentStyles().getStyle(r.getNombreDeEstilo(), r.getEstilo().getFamily());
+                    if (targetStyle == null) {
+                        // Crear el nuevo estilo en el documento destino si no existe
+                        targetStyle = documentoOdt.getOrCreateDocumentStyles().newStyle(r.getNombreDeEstilo(), r.getEstilo().getFamily());
+
+                        // Copiar propiedades del estilo fuente al estilo destino
+                        targetStyle.setProperties(r.getEstilo().getStylePropertiesDeep());
+                    }
+                    OdfTextParagraph par2 = documentoOdt.newParagraph(r.getTexto());
+                    par2.setStyleName(r.getNombreDeEstilo());
+//                    dom.getRootElement().appendChild(par);
+//                    documentoOdt.addText(t); funciona pero todo en el mismo parrafo
+//                    documentoOdt.newParagraph().addContent(t); funciona
+
+                }
+
+
+//                documentoOdt.insertDocument(documentoOdt, documentoOdt.getDocumentPath());
                 //            documentoOdt.insertDocument();
             }
             // Creamos los directorios para el archivo de salida
             pathDirectorioDeSalida.toFile().mkdirs();
             // Creamos el archivo del examen
-            documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + version + ".odt").toString());
+            documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + e.getVersion() + ".odt").toString());
             documentoOdt.save(documentoExamen);
 
-            logger.info("Examen guardado: Version " + version + " en: " + documentoExamen);
+            logger.info("Examen guardado: Version " + e.getVersion() + " en: " + documentoExamen);
         } catch (Exception ex) {
             logger.error("Error guardando examen: " + ex.getMessage());
         }

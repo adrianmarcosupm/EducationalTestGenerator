@@ -126,7 +126,7 @@ public class Generador {
 
     public void generar() {
         Random random = new Random();
-//      LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
+        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
         LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
         ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
@@ -134,6 +134,10 @@ public class Generador {
         ArrayList<Integer> preguntasACoger = new ArrayList<>(); // La lista con los numeros de preguntas que vamos a querer
         int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
+        if (numPreguntasDelBanco < numPreguntas) {
+            logger.error("No hay tantas preguntas en el banco de preguntas.");
+            return;
+        }
         // Generamos una secuencia de numeros entre 1 y las preguntas del banco, para seleccionar preguntas
         // Para no coger repetidas
         ArrayList<Integer> candidatos = new ArrayList<>();
@@ -217,13 +221,14 @@ public class Generador {
         logger.debug(lineaDeGuiones);
         /////////////
 
-
-        //TODO: Mezclamos las preguntas de manera que no se repita ninguna en ninguna version, (o como mucho las admitidas en la configuracion)
         // TODO: guardamos el examen con la version y las preguntas
-//        logger.info(lineaDeGuiones);
-//        logger.info("Guardando exámenes");
-//        logger.info(lineaDeGuiones);
-//        parseadorPlantilla.guardarExamen("A", preguntasParaMezclar);
+        logger.info(lineaDeGuiones);
+        logger.info("Guardando exámenes");
+        logger.info(lineaDeGuiones);
+        for (Examen e : examenes) {
+            parseadorPlantilla.guardarExamen(e);
+        }
+
     }
 
 

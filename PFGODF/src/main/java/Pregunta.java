@@ -1,15 +1,19 @@
 
+import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
+
 import java.util.ArrayList;
 
 public class Pregunta {
     private ArrayList<String> textos; // Puede contener varios parrafos
     private ArrayList<String> nombreDeEstilos; // Puede contener varios estilos
     private ArrayList<Respuesta> respuestasDePregunta;
+    private ArrayList<OdfStyle> estilos;
 
     public Pregunta() {
         textos = new ArrayList<>();
         nombreDeEstilos = new ArrayList<>();
         respuestasDePregunta = new ArrayList<>();
+        estilos = new ArrayList<>();
     }
 
     public ArrayList<String> getTextos() {
@@ -36,6 +40,14 @@ public class Pregunta {
         this.respuestasDePregunta = respuestasDePregunta;
     }
 
+    public ArrayList<OdfStyle> getEstilos() {
+        return estilos;
+    }
+
+    public void setEstilos(ArrayList<OdfStyle> estilos) {
+        this.estilos = estilos;
+    }
+
     public Pregunta obtenerCopiaRecursiva() {
         Pregunta preg = new Pregunta();
         for (int i = 0; i < this.getTextos().size(); i++) {
@@ -46,6 +58,9 @@ public class Pregunta {
         }
         for (int i = 0; i < this.getRespuestasDePregunta().size(); i++) {
             preg.getRespuestasDePregunta().add(this.getRespuestasDePregunta().get(i).obtenerCopiaRecursiva());
+        }
+        for (int i = 0; i < this.getEstilos().size(); i++) {
+            preg.getEstilos().add(this.getEstilos().get(i));
         }
 
         return preg;
