@@ -2,11 +2,11 @@ import java.util.ArrayList;
 
 public class Examen {
     private String version;
-    private ArrayList<Pregunta> preguntas;
+    private ArrayList<Pregunta> grupoDePreguntas;
 
     public Examen() {
-        version = "";
-        preguntas = new ArrayList<>();
+        this.version = "";
+        this.grupoDePreguntas = new ArrayList<>();
     }
 
     public String getVersion() {
@@ -17,11 +17,28 @@ public class Examen {
         this.version = version;
     }
 
-    public ArrayList<Pregunta> getPreguntas() {
-        return preguntas;
+    public ArrayList<Pregunta> getGrupoDePreguntas() {
+        return grupoDePreguntas;
     }
 
-    public void setPreguntas(ArrayList<Pregunta> preguntas) {
-        this.preguntas = preguntas;
+    public void setGrupoDePreguntas(ArrayList<Pregunta> grupoDePreguntas) {
+        this.grupoDePreguntas = grupoDePreguntas;
+    }
+
+    public Examen(String version, ArrayList<Pregunta> grupoDePreguntas) {
+        this.version = version;
+        this.grupoDePreguntas = grupoDePreguntas;
+    }
+
+    public Examen obtenerCopiaRecursiva() {
+        Examen e = new Examen();
+
+        e.setVersion(this.version);
+
+        for (int i = 0; i < this.grupoDePreguntas.size(); i++) {
+            e.getGrupoDePreguntas().add(this.grupoDePreguntas.get(i).obtenerCopiaRecursiva());
+        }
+
+        return e;
     }
 }

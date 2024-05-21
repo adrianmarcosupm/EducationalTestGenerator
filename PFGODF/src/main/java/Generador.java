@@ -188,7 +188,7 @@ public class Generador {
         // Comenzamos con la generación de los exámenes
         Examen examenTemp;
         Pregunta preguntaTemp;
-        Respuesta respuestaTemp;
+        Parrafo parrafoTemp;
         // Para cada version
         for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
             examenTemp = new Examen();
@@ -304,7 +304,7 @@ public class Generador {
 
     // Intercambia dos respuestas de una pregunta
     private void intercambiarR(Pregunta p, int a, int b) {
-        Respuesta rTemp = p.getRespuestasDePregunta().get(a);
+        Parrafo rTemp = p.getRespuestasDePregunta().get(a);
         p.getRespuestasDePregunta().set(a, p.getRespuestasDePregunta().get(b));
         p.getRespuestasDePregunta().set(b, rTemp);
     }

@@ -2,17 +2,15 @@
  *			Ajustes generales			*
   *****************************************************************
            	    Archivo de plantilla               = plantilla.odt
-						Archivo del banco de preguntas= bancotemporal.odt
+						Archivo del banco de pregunta= bancotemporal.odt
 		Directorio para guardar los exámenes = aqui           
 
 *****************************************************************
 *			Ajustes de exámen			*
 *****************************************************************
-Número de versiones                   =      2
+Número máximo de versiones                   =      4
 Temas a incluir (separados por comas) =  1,2,5,4 ,6, 7  ,8  
-Número de preguntas                   = 10
-Número de preguntas permitidas en el mismo lugar = 0
-Número de respuestas permitidas en el mismo lugar = 0
+Número de pregunta                   = 15
 
 *****************************************************************
 *		     Adaptaciones especiales			*

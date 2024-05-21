@@ -4,14 +4,11 @@ import org.odftoolkit.odfdom.doc.OdfTextDocument;
 import org.odftoolkit.odfdom.dom.OdfContentDom;
 import org.odftoolkit.odfdom.dom.element.style.StyleStyleElement;
 import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
-import org.odftoolkit.odfdom.dom.style.props.OdfTextProperties;
 import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextParagraph;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextSpan;
 import org.odftoolkit.odfdom.incubator.search.TextNavigation;
 import org.odftoolkit.odfdom.incubator.search.TextSelection;
-import org.odftoolkit.odfdom.pkg.OdfElement;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -19,7 +16,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Map;
 
 
 public class LectorEscritorDeOdt {
@@ -56,7 +52,7 @@ public class LectorEscritorDeOdt {
 
         ArrayList<Pregunta> preguntasReturn = new ArrayList<>(); // La lista de preguntas que devolvemos al generador
         Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
-        Respuesta respuestaTemp = null; // Guardamos la respuesta que encontramos para añadirla a la lista de respuestas
+        Parrafo parrafoTemp = null; // Guardamos la respuesta que encontramos para añadirla a la lista de respuestas
 
         boolean sigueBuscando = true; // Para salir de los bucles
         boolean textoEncontrado = false; // Para elegir caminos diferentes en los bucles
@@ -71,12 +67,11 @@ public class LectorEscritorDeOdt {
         try {
             documentoOdt = OdfTextDocument.loadDocument(fileArchivoALeerOdt);
             NodeList nodeTextPList = documentoOdt.getContentRoot().getElementsByTagName("text:p"); // Buscamos nodos XML con esta etiqueta
-            NodeList nodeTextPList2 = documentoOdt.getContentRoot().getElementsByTagName("text:span");
-            for (OdfStyle s : documentoOdt.getStylesDom().getAutomaticStyles().getAllStyles()){
-//                System.out.println(s.toString());
+            for (OdfStyle s : documentoOdt.getStylesDom().getAutomaticStyles().getAllStyles()) {
+//                System.out.println(s.toString()); TODO: obtiene estilos
             }
-            for (OdfStyle s : documentoOdt.getStylesDom().getOfficeStyles().getAllStyles()){
-//                System.out.println(s.toString());
+            for (OdfStyle s : documentoOdt.getStylesDom().getOfficeStyles().getAllStyles()) {
+//                System.out.println(s.toString()); TODO: obtiene estilos
             }
             //////////////////////////////////////////////////////////////////////////////////////////////////////////
             // Recorremos todos los nodos del documento hasta que no queden más o hasta que encontremos las preguntas
@@ -104,22 +99,6 @@ public class LectorEscritorDeOdt {
                 ////////////////////////////////////
                 // Buscamos el texto de la pregunta
                 nodo = nodeTextPList.item(indexNodo);
-                if (nodo instanceof OdfTextParagraph) {
-                    NodeList nl = nodo.getChildNodes();
-                    for (int i = 0; i < nl.getLength(); i++) {
-                        System.out.println(nl.item(i).getLocalName());
-                        System.out.println(nl.item(i).getNodeName());
-                        System.out.println(nl.item(i).getNodeType());
-                        System.out.println(nl.item(i).getNodeValue());
-                        System.out.println(nl.item(i).getTextContent());
-                        if (nl.item(i).getAttributes() != null)
-                        {
-                            System.out.println(nl.item(i).getAttributes().getNamedItem("text:style-name").getNodeValue());
-                        }
-
-                        System.out.println("----");
-                    }
-                }
                 exito = false;
                 sigueBuscando = true;
                 for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
@@ -131,7 +110,7 @@ public class LectorEscritorDeOdt {
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (textoEncontrado) {
-                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
+                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextosSpan().get(0));
                                     exito = false;
                                     sigueBuscando = false;
                                 } else {
@@ -148,9 +127,28 @@ public class LectorEscritorDeOdt {
                                 if (textoEncontrado == false) {
                                     preguntaTemp = new Pregunta();
                                 }
-                                preguntaTemp.getTextos().add(lineaLeida);
-                                preguntaTemp.getNombreDeEstilos().add(parrafo.getTextStyleNameAttribute());
-                                preguntaTemp.getEstilos().add(parrafo.getOrCreateAutomaticStyles().getStyle(parrafo.getTextStyleNameAttribute(),OdfStyleFamily.Text));
+                                // Añadimos un nuevo parrafo
+                                preguntaTemp.getParrafos().add(new Parrafo());
+                                // Guardamos todos los text span del parrafo para guardar sus estilos
+                                NodeList nodosHijos = nodo.getChildNodes();
+                                for (int i = 0; i < nodosHijos.getLength(); i++) {
+//                                    System.out.println(nodosHijos.item(i).getLocalName()); //span todo quitar
+//                                    System.out.println(nodosHijos.item(i).getNodeName()); //text:span
+//                                    System.out.println(nodosHijos.item(i).getTextContent()); todo end quitar
+                                    if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                        OdfTextSpan ts = (OdfTextSpan) nodosHijos.item(i);
+                                        preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getTextosSpan().add(ts.getTextContent());
+                                        preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getNombresDeEstilosTextosSpan().
+                                                add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
+                                    }
+                                }
+                                //Guardamos el estilo del parrafo TODO quitar
+                                System.out.println("getStyleName" + parrafo.getStyleName());
+                                System.out.println("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                System.out.println("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                System.out.println("getDocumentStyle" + parrafo.getDocumentStyle());
+                                //////////////todo end quitar
+                                preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
 
                                 textoEncontrado = true;
                                 exito = true;
@@ -175,18 +173,39 @@ public class LectorEscritorDeOdt {
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (!textoEncontrado) {
-                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getTextos().get(0));
+                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextosSpan().get(0));
                                 }
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagRNoRegex)) {
                                 if (!textoEncontrado) {
                                     logger.warn("Varias etiquetas RESPUESTAS seguidas");
                                 } else {
-                                    logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getTextos().get(0));
+                                    logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextosSpan().get(0));
                                 }
                             } else {
-                                respuestaTemp = new Respuesta(lineaLeida, parrafo.getStyleName(), parrafo.getAutomaticStyle());
-                                preguntaTemp.getRespuestasDePregunta().add(respuestaTemp);
+                                // Añadimos una nueva respuesta
+                                preguntaTemp.getRespuestasDePregunta().add(new Parrafo());
+                                // Guardamos todos los text span del parrafo para guardar sus estilos
+                                NodeList nodosHijos = nodo.getChildNodes();
+                                for (int i = 0; i < nodosHijos.getLength(); i++) {
+//                                    System.out.println(nodosHijos.item(i).getLocalName()); //span todo quitar
+//                                    System.out.println(nodosHijos.item(i).getNodeName()); //text:span
+//                                    System.out.println(nodosHijos.item(i).getTextContent()); todo end quitar
+                                    if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                        OdfTextSpan ts = (OdfTextSpan) nodosHijos.item(i);
+                                        preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getTextosSpan().add(ts.getTextContent());
+                                        preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getNombresDeEstilosTextosSpan().
+                                                add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
+                                    }
+                                }
+                                //Guardamos el estilo del parrafo TODO quitar
+                                System.out.println("getStyleName" + parrafo.getStyleName());
+                                System.out.println("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                System.out.println("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                System.out.println("getDocumentStyle" + parrafo.getDocumentStyle());
+                                //////////////todo end quitar
+                                preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
+
                                 textoEncontrado = true;
                                 exito = true;
                             }
@@ -200,18 +219,19 @@ public class LectorEscritorDeOdt {
                 contadorDePreguntas++;
 
                 // Si la pregunta encontrada esta en la lista de las que queremos, la añadimos
+                //TODO: falta si es del tema que queremos o de la dificultad que queremos
                 if (numerosDePregunta.contains(contadorDePreguntas)) {
                     int contadorDeRespuestas = 1; //TODO: Para debugear
                     preguntasReturn.add(preguntaTemp);
-                    logger.debug("Pregunta añadida " + contadorDePreguntas + ": " + preguntaTemp.getTextos().get(0));
-                    for (Respuesta r : preguntaTemp.getRespuestasDePregunta()) {
-                        logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTexto());
+                    logger.debug("Pregunta añadida " + contadorDePreguntas + ": " + preguntaTemp.getParrafos().get(0).getTextosSpan().get(0));
+                    for (Parrafo r : preguntaTemp.getRespuestasDePregunta()) {
+                        logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTextosSpan().get(0));
                         contadorDeRespuestas++; //TODO: para debug
                     }
 
                 }
 
-                // Si no hemos encotrado la ultima pregunta, seguimos buscando
+                // Si no hemos encontrado la ultima pregunta, seguimos buscando
                 if (!Collections.max(numerosDePregunta).equals(contadorDePreguntas)) {
                     sigueBuscando = true;
                     textoEncontrado = false;
@@ -271,7 +291,7 @@ public class LectorEscritorDeOdt {
             for (Pregunta p : e.getPreguntas()) {
                 for (int i = 0; i < p.getTextos().size(); i++) {
 //                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
-                    StyleStyleElement targetStyle = documentoOdt.getStyleByName( OdfStyleFamily.Text,p.getNombreDeEstilos().get(i));
+                    StyleStyleElement targetStyle = documentoOdt.getStyleByName(OdfStyleFamily.Text, p.getNombreDeEstilos().get(i));
                     if (targetStyle != null) {
                         logger.debug(targetStyle.toString());
                     }
@@ -282,7 +302,7 @@ public class LectorEscritorDeOdt {
                         targetStyle = documentoOdt.getOrCreateDocumentStyles().newStyle(p.getNombreDeEstilos().get(i), OdfStyleFamily.Text);
 
                         // Copiar propiedades del estilo fuente al estilo destino
-                        targetStyle.setProperties(documentoOdt.getStyleByName( OdfStyleFamily.Text,p.getNombreDeEstilos().get(i)).getStylePropertiesDeep());
+                        targetStyle.setProperties(documentoOdt.getStyleByName(OdfStyleFamily.Text, p.getNombreDeEstilos().get(i)).getStylePropertiesDeep());
                     }
                     OdfTextParagraph par2 = documentoOdt.newParagraph(p.getTextos().get(i));
 
@@ -293,8 +313,7 @@ public class LectorEscritorDeOdt {
                 }
 
 
-
-                for (Respuesta r : p.getRespuestasDePregunta()) {
+                for (Parrafo r : p.getRespuestasDePregunta()) {
 //                    OdfTextParagraph par = new OdfTextParagraph(dom, r.getNombreDeEstilo(),r.getTexto());
                     OdfStyle targetStyle = documentoOdt.getOrCreateDocumentStyles().getStyle(r.getNombreDeEstilo(), r.getEstilo().getFamily());
                     if (targetStyle == null) {
