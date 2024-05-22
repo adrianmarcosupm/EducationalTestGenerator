@@ -126,13 +126,13 @@ public class Generador {
 
     public void generar() {
         Random random = new Random();
-        LectorEscritorDeOdt parseadorPlantilla = new LectorEscritorDeOdt(plantilla, directorioSalida);
-        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
+        LectorEscritorDeOdt lectorEscritorDeOdt = new LectorEscritorDeOdt(bancoDePreguntas, plantilla, directorioSalida);
+//        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
         ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
         ArrayList<Pregunta> preguntasParaMezclar; // Donde guardamos las preguntas para mezclarlas
         ArrayList<Integer> preguntasACoger = new ArrayList<>(); // La lista con los numeros de preguntas que vamos a querer
-        int numPreguntasDelBanco = parseadorBanco.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
+        int numPreguntasDelBanco = lectorEscritorDeOdt.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
         if (numPreguntasDelBanco < numPreguntas) {
             logger.error("No hay tantas preguntas en el banco de preguntas.");
@@ -153,12 +153,13 @@ public class Generador {
         logger.debug("Tamaño de preguntasACoger: " + preguntasACoger.size());
 
         // Obtenemos esas preguntas del banco de preguntas
-        preguntasParaMezclar = parseadorBanco.obtenerPreguntas(preguntasACoger);
-        logger.debug("Tamaño de preguntasParaMezclar: " + preguntasParaMezclar.size());
+        preguntasParaMezclar = lectorEscritorDeOdt.obtenerPreguntas(preguntasACoger);
 
         if (preguntasParaMezclar == null) {
             return; // Los errores son mostrados antes de llegar aqui
         }
+
+        logger.debug("Tamaño de preguntasParaMezclar: " + preguntasParaMezclar.size());
 
         ////////////////////////////////////////////////////
         // Calculamos el número de versiones que va a haber.
@@ -190,13 +191,15 @@ public class Generador {
         Pregunta preguntaTemp;
         Parrafo parrafoTemp;
         // Para cada version
+        //todo: alomejro copiarecursiva de examen?
         for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
             examenTemp = new Examen();
             examenTemp.setVersion(obtenerVersion(indexExamen, numVersionesDiferentes));
-            logger.debug("Examen creado con version: " + examenTemp.getVersion());
+
             for (Pregunta p : preguntasParaMezclar) {
-                examenTemp.getPreguntas().add(p.obtenerCopiaRecursiva());
+                examenTemp.getGrupoDePreguntas().add(p.obtenerCopiaRecursiva());
             }
+            logger.debug("Examen creado con version: " + examenTemp.getVersion());
 
             // Lo incluimos en la lista de exámenes generados.
             examenes.add(examenTemp);
@@ -211,10 +214,10 @@ public class Generador {
             logger.debug("Exámen: " + i);
             logger.debug("Version: " + examenes.get(i).getVersion());
             logger.debug("Preguntas:");
-            for (int j = 0; j < examenes.get(i).getPreguntas().size(); j++) {
-                logger.debug("Pregunta: " + j + " : " + examenes.get(i).getPreguntas().get(j).getTextos().get(0).toString());
-                for (int k = 0; k < examenes.get(i).getPreguntas().get(j).getRespuestasDePregunta().size(); k++) {
-                    logger.debug("Respuesta: " + k + " : " + examenes.get(i).getPreguntas().get(j).getRespuestasDePregunta().get(k).getTexto());
+            for (int j = 0; j < examenes.get(i).getGrupoDePreguntas().size(); j++) {
+                logger.debug("Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal());
+                for (int k = 0; k < examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().size(); k++) {
+                    logger.debug("Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal());
                 }
             }
         }
@@ -226,7 +229,7 @@ public class Generador {
         logger.info("Guardando exámenes");
         logger.info(lineaDeGuiones);
         for (Examen e : examenes) {
-            parseadorPlantilla.guardarExamen(e);
+            lectorEscritorDeOdt.guardarExamen(e);
         }
 
     }
@@ -242,9 +245,9 @@ public class Generador {
         int numDeVariante; // Valor del elemento de numVersionesArr
         //////////////////////
         // Mezclar respuestas
-        for (int indexP = 0; indexP < examenesParaMezclar.get(0).getPreguntas().size(); indexP++) {
+        for (int indexP = 0; indexP < examenesParaMezclar.get(0).getGrupoDePreguntas().size(); indexP++) {
             // Rellenamos el array con las posibles versiones de orden de respuestas
-            for (int i = 0; i < examenesParaMezclar.get(0).getPreguntas().get(0).getRespuestasDePregunta().size(); i++) {
+            for (int i = 0; i < examenesParaMezclar.get(0).getGrupoDePreguntas().get(0).getRespuestasDePregunta().size(); i++) {
                 numVersionesArr.add(i);
             }
             // Mezclamos esta pregunta en todos los examenes, cada uno con un orden diferente
@@ -252,14 +255,14 @@ public class Generador {
                 numDeVarianteIndex = random.nextInt(0, numVersionesArr.size());
                 numDeVariante = numVersionesArr.get(numDeVarianteIndex);
                 numVersionesArr.remove(numDeVarianteIndex);
-                mezclarRespuestas(e.getPreguntas().get(indexP), numDeVariante);
+                mezclarRespuestas(e.getGrupoDePreguntas().get(indexP), numDeVariante);
             }
         }
         numVersionesArr.clear();
         /////////////////////
         // Mezclar preguntas
         // Rellenamos el array con las posibles versiones de orden de preguntas
-        for (int i = 0; i < examenesParaMezclar.get(0).getPreguntas().size(); i++) {
+        for (int i = 0; i < examenesParaMezclar.get(0).getGrupoDePreguntas().size(); i++) {
             numVersionesArr.add(i);
         }
         // Mezclamos las preguntas en todos los examenes, cada uno con un orden diferente
@@ -274,10 +277,10 @@ public class Generador {
     // Mezcla las preguntas de un examen
     private void mezclarPreguntas(Examen e, int numDeVariante) {
         for (int i = 0; i < numDeVariante; i++) {
-            for (int indexP = 0; indexP < (e.getPreguntas().size() - 1); indexP = indexP + 2) {
+            for (int indexP = 0; indexP < (e.getGrupoDePreguntas().size() - 1); indexP = indexP + 2) {
                 intercambiarP(e, indexP, indexP + 1);
             }
-            for (int indexP = 1; indexP < (e.getPreguntas().size() - 1); indexP = indexP + 2) {
+            for (int indexP = 1; indexP < (e.getGrupoDePreguntas().size() - 1); indexP = indexP + 2) {
                 intercambiarP(e, indexP, indexP + 1);
             }
         }
@@ -297,9 +300,9 @@ public class Generador {
 
     // Intercambia dos preguntas de un examen
     private void intercambiarP(Examen e, int a, int b) {
-        Pregunta pTemp = e.getPreguntas().get(a); // Guardamos a
-        e.getPreguntas().set(a, e.getPreguntas().get(b)); // Ponemos b en a
-        e.getPreguntas().set(b, pTemp); // Ponemos a en b
+        Pregunta pTemp = e.getGrupoDePreguntas().get(a); // Guardamos a
+        e.getGrupoDePreguntas().set(a, e.getGrupoDePreguntas().get(b)); // Ponemos b en a
+        e.getGrupoDePreguntas().set(b, pTemp); // Ponemos a en b
     }
 
     // Intercambia dos respuestas de una pregunta

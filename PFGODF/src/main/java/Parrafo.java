@@ -3,17 +3,20 @@ import java.util.ArrayList;
 public class Parrafo {
     private ArrayList<String> textosSpan;
     private ArrayList<String> nombresDeEstilosTextosSpan;
+    private String textoDeParrafo;
     private String nombreDeEstiloParrafo;
 
     public Parrafo() {
         this.textosSpan = new ArrayList<>();
         this.nombresDeEstilosTextosSpan = new ArrayList<>();
+        this.textoDeParrafo = "";
         this.nombreDeEstiloParrafo = "";
     }
 
-    public Parrafo(ArrayList<String> textosSpan, ArrayList<String> nombresDeEstilosTextosSpan, String nombreDeEstiloParrafo) {
+    public Parrafo(ArrayList<String> textosSpan, ArrayList<String> nombresDeEstilosTextosSpan, String textoDeParrafo, String nombreDeEstiloParrafo) {
         this.textosSpan = textosSpan;
         this.nombresDeEstilosTextosSpan = nombresDeEstilosTextosSpan;
+        this.textoDeParrafo = textoDeParrafo;
         this.nombreDeEstiloParrafo = nombreDeEstiloParrafo;
     }
 
@@ -41,6 +44,27 @@ public class Parrafo {
         this.nombreDeEstiloParrafo = nombreDeEstiloParrafo;
     }
 
+    public String getTextoDeParrafo() {
+        return textoDeParrafo;
+    }
+
+    public void setTextoDeParrafo(String textoDeParrafo) {
+        this.textoDeParrafo = textoDeParrafo;
+    }
+
+    //Obtiene el texto total del parrafo, porque a veces no hay spans o no hay texto de parrafo.
+    public String getTextoTotal() {
+        if (this.textoDeParrafo != "") {
+            return this.textoDeParrafo;
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String t : this.textosSpan) {
+                sb.append(t);
+            }
+            return sb.toString();
+        }
+    }
+
     public Parrafo obtenerCopiaRecursiva() {
         Parrafo pReturn = new Parrafo();
 
@@ -52,7 +76,9 @@ public class Parrafo {
             pReturn.getNombresDeEstilosTextosSpan().add(this.nombresDeEstilosTextosSpan.get(i));
         }
 
-        pReturn.nombreDeEstiloParrafo = this.getNombreDeEstiloParrafo();
+        pReturn.textoDeParrafo = this.textoDeParrafo;
+
+        pReturn.nombreDeEstiloParrafo = this.nombreDeEstiloParrafo;
 
         return pReturn;
     }
