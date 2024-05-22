@@ -1,53 +1,46 @@
-
 import java.util.ArrayList;
 
 public class Pregunta {
-    private ArrayList<String> textos; // Puede contener varios parrafos
-    private ArrayList<String> nombreDeEstilos; // Puede contener varios estilos
-    private ArrayList<Respuesta> respuestasDePregunta;
+    private ArrayList<Parrafo> parrafos; // Puede contener varios parrafos
+    private ArrayList<Parrafo> respuestasDePregunta;
 
     public Pregunta() {
-        textos = new ArrayList<>();
-        nombreDeEstilos = new ArrayList<>();
-        respuestasDePregunta = new ArrayList<>();
+        this.parrafos = new ArrayList<>();
+        this.respuestasDePregunta = new ArrayList<>();
     }
 
-    public ArrayList<String> getTextos() {
-        return textos;
+    public Pregunta(ArrayList<Parrafo> parrafos, ArrayList<String> nombresDeEstilosParrafos, ArrayList<Parrafo> respuestasDePregunta) {
+        this.parrafos = parrafos;
+        this.respuestasDePregunta = respuestasDePregunta;
     }
 
-    public void setTextos(ArrayList<String> textos) {
-        this.textos = textos;
+    public ArrayList<Parrafo> getParrafos() {
+        return parrafos;
     }
 
-    public ArrayList<String> getNombreDeEstilos() {
-        return nombreDeEstilos;
+    public void setParrafos(ArrayList<Parrafo> parrafos) {
+        this.parrafos = parrafos;
     }
 
-    public void setNombreDeEstilos(ArrayList<String> nombreDeEstilos) {
-        this.nombreDeEstilos = nombreDeEstilos;
-    }
-
-    public ArrayList<Respuesta> getRespuestasDePregunta() {
+    public ArrayList<Parrafo> getRespuestasDePregunta() {
         return respuestasDePregunta;
     }
 
-    public void setRespuestasDePregunta(ArrayList<Respuesta> respuestasDePregunta) {
+    public void setRespuestasDePregunta(ArrayList<Parrafo> respuestasDePregunta) {
         this.respuestasDePregunta = respuestasDePregunta;
     }
 
     public Pregunta obtenerCopiaRecursiva() {
-        Pregunta preg = new Pregunta();
-        for (int i = 0; i < this.getTextos().size(); i++) {
-            preg.getTextos().add(this.getTextos().get(i));
-        }
-        for (int i = 0; i < this.getNombreDeEstilos().size(); i++) {
-            preg.getNombreDeEstilos().add(this.getNombreDeEstilos().get(i));
-        }
-        for (int i = 0; i < this.getRespuestasDePregunta().size(); i++) {
-            preg.getRespuestasDePregunta().add(this.getRespuestasDePregunta().get(i).obtenerCopiaRecursiva());
+        Pregunta pReturn = new Pregunta();
+
+        for (int i = 0; i < this.parrafos.size(); i++) {
+            pReturn.getParrafos().add(this.parrafos.get(i).obtenerCopiaRecursiva());
         }
 
-        return preg;
+        for (int i = 0; i < this.respuestasDePregunta.size(); i++) {
+            pReturn.getRespuestasDePregunta().add(this.respuestasDePregunta.get(i).obtenerCopiaRecursiva());
+        }
+
+        return pReturn;
     }
 }
