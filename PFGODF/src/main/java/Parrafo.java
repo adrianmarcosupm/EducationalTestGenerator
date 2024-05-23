@@ -76,9 +76,9 @@ public class Parrafo {
             pReturn.getNombresDeEstilosTextosSpan().add(this.nombresDeEstilosTextosSpan.get(i));
         }
 
-        pReturn.textoDeParrafo = this.textoDeParrafo;
+        pReturn.setTextoDeParrafo(this.textoDeParrafo);
 
-        pReturn.nombreDeEstiloParrafo = this.nombreDeEstiloParrafo;
+        pReturn.setNombreDeEstiloParrafo(this.nombreDeEstiloParrafo);
 
         return pReturn;
     }
