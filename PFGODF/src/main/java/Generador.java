@@ -229,7 +229,10 @@ public class Generador {
         logger.info("Guardando exámenes");
         logger.info(lineaDeGuiones);
         for (Examen e : examenes) {
-            lectorEscritorDeOdt.guardarExamen(e);
+            if (!lectorEscritorDeOdt.guardarExamen(e))
+            {
+                return;
+            }
         }
 
     }

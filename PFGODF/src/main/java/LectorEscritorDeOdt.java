@@ -298,14 +298,53 @@ public class LectorEscritorDeOdt {
         return numPreguntas;
     }
 
-    public void guardarExamen(Examen e) {
+    private void cambiarEstiloRecursivo(NodeList nl) {
+        if (nl.getLength() > 0) {
+            for (int i = 0; i < nl.getLength(); i++) {
+                cambiarEstiloRecursivo(nl.item(i).getChildNodes());
+                if (nl.item(i).getAttributes() != null) {
+                    if (nl.item(i).getAttributes().getNamedItem("text:style-name") != null) {
+                        logger.info(nl.item(i).getAttributes().getNamedItem("text:style-name").toString()); //style:parent-style-name //draw:style-name
+                        nl.item(i).getAttributes().
+                    }else if(nl.item(i).getAttributes().getNamedItem("style:parent-style-name") != null)
+                    {
+
+                    }else if(nl.item(i).getAttributes().getNamedItem("draw:style-name") != null)
+                    {
+
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean guardarExamen(Examen e) {
 
         try {
             documentoOdtCabecera = OdfTextDocument.loadDocument(fileCabecera);
             logger.debug("Archivo leido: " + fileCabecera);
         } catch (Exception ex) {
             logger.error("Error al leer el archivo .odt " + fileCabecera.toString() + " " + ex.getMessage());
+            return false;
         }
+
+        // cambiamos los nombres de los estilos para que no se sobreescriban
+        try {
+            for (OdfStyle s : documentoOdtCabecera.getStylesDom().getAutomaticStyles().getAllStyles()) {
+                s.setStyleNameAttribute(s.getStyleNameAttribute() + "CABECERA");
+                s.setStyleParentStyleNameAttribute(s.getStyleParentStyleNameAttribute() + "CABECERA");
+            }
+            for (OdfStyle s : documentoOdtCabecera.getStylesDom().getOfficeStyles().getAllStyles()) {
+                s.setStyleNameAttribute(s.getStyleNameAttribute() + "CABECERA");
+                s.setStyleParentStyleNameAttribute(s.getStyleParentStyleNameAttribute() + "CABECERA");
+            }
+            cambiarEstiloRecursivo(documentoOdtCabecera.getContentDom().getRootElement().getChildNodes());
+
+        } catch (Exception exception) {
+            logger.error("Error al crear los estilos. " + exception.getMessage());
+            return false;
+        }
+
 
 //        File documentoExamen;
 //        OdfContentDom dom;
@@ -448,6 +487,7 @@ public class LectorEscritorDeOdt {
 //            maestro.insertContentFromDocumentAfter(esclavo, maestro.getParagraphByReverseIndex(0, false), true);
 //            maestro.save(archivoMaestro);
 //        }
+        return true;
     }
 
 
