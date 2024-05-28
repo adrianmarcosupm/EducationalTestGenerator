@@ -1,7 +1,6 @@
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.odftoolkit.odfdom.doc.OdfTextDocument;
-import org.odftoolkit.odfdom.dom.element.style.StyleStyleElement;
 import org.odftoolkit.odfdom.dom.element.text.TextSpanElement;
 import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
 import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
@@ -33,6 +32,8 @@ public class LectorEscritorDeOdt {
 
     private static final Logger logger = LogManager.getLogger();
     private static final String lineaDeGuiones = "------------------------------------------------------";
+    private static final char[] letrasParaLasRespuestas = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+            'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 
     // Constructor
     public LectorEscritorDeOdt(File banco, File cabecera, Path directorioAEscribir) {
@@ -44,15 +45,9 @@ public class LectorEscritorDeOdt {
             documentoOdtBanco = OdfTextDocument.loadDocument(fileBanco);
             logger.debug("Archivo leido: " + fileBanco);
         } catch (Exception ex) {
-            logger.error("Error al leer el archivo .odt " + banco + ex.getMessage());
+            logger.error("Error al leer el archivo .odt " + fileBanco.toString() + " " + ex.getMessage());
         }
 
-        try {
-            documentoOdtCabecera = OdfTextDocument.loadDocument(fileCabecera);
-            logger.debug("Archivo leido: " + fileCabecera);
-        } catch (Exception ex) {
-            logger.error("Error al leer el archivo .odt " + cabecera + ex.getMessage());
-        }
     }
 
     public ArrayList<Pregunta> obtenerPreguntas(ArrayList<Integer> numerosDePregunta) {
@@ -150,6 +145,12 @@ public class LectorEscritorDeOdt {
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getTextosSpan().add(ts.getTextContent());
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
+                                        //Guardamos el estilo del parrafo TODO quitar
+                                        logger.debug("getStyleName" + ts.getStyleName());
+                                        logger.debug("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
+                                        logger.debug("getAutomaticStyle" + ts.getAutomaticStyle());
+                                        logger.debug("getDocumentStyle" + ts.getDocumentStyle());
+                                        //////////////todo end quitar
                                     }
                                 }
                                 //si no tiene nodos textspan añadimos el texto del parrafo
@@ -158,10 +159,10 @@ public class LectorEscritorDeOdt {
                                 }
 
                                 // TODO quitar
-                                System.out.println("getStyleName" + parrafo.getStyleName());
-                                System.out.println("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                System.out.println("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                System.out.println("getDocumentStyle" + parrafo.getDocumentStyle());
+                                logger.debug("getStyleName" + parrafo.getStyleName());
+                                logger.debug("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                logger.debug("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                logger.debug("getDocumentStyle" + parrafo.getDocumentStyle());
                                 //////////////todo end quitar
                                 //Guardamos el estilo del parrafo
                                 preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
@@ -212,6 +213,12 @@ public class LectorEscritorDeOdt {
                                         preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getTextosSpan().add(ts.getTextContent());
                                         preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
+                                        //Guardamos el estilo del parrafo TODO quitar
+                                        logger.debug("getStyleName" + ts.getStyleName());
+                                        logger.debug("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
+                                        logger.debug("getAutomaticStyle" + ts.getAutomaticStyle());
+                                        logger.debug("getDocumentStyle" + ts.getDocumentStyle());
+                                        //////////////todo end quitar
                                     }
                                 }
                                 //si no tiene nodos textspan añadimos el texto del parrafo
@@ -219,10 +226,10 @@ public class LectorEscritorDeOdt {
                                     preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
                                 //Guardamos el estilo del parrafo TODO quitar
-                                System.out.println("getStyleName" + parrafo.getStyleName());
-                                System.out.println("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                System.out.println("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                System.out.println("getDocumentStyle" + parrafo.getDocumentStyle());
+                                logger.debug("getStyleName" + parrafo.getStyleName());
+                                logger.debug("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                logger.debug("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                logger.debug("getDocumentStyle" + parrafo.getDocumentStyle());
                                 //////////////todo end quitar
                                 preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
 
@@ -293,98 +300,163 @@ public class LectorEscritorDeOdt {
         return numPreguntas;
     }
 
-    public void guardarExamen(Examen e) {
+    private String obtenerNuevoNombreDeEstilo(String antiguoNombre, OdfStyleFamily sf) {
+        try {
+            if (documentoOdtCabecera.getStyleByName(sf, antiguoNombre) == null) {
+                return antiguoNombre;
+            }
+            for (int i = 2; i < 10000; i++) {
+                if (documentoOdtCabecera.getStyleByName(sf, antiguoNombre + i) == null) {
+                    return (antiguoNombre + i);
+                }
+            }
+            logger.error("No se ha podido crear el nuevo estilo, hay demasiados estilos con el mismo nombre.");
+        } catch (Exception e) {
+            logger.error("Error creando los estilos. " + e.getMessage());
+        }
+        return "";
+    }
 
-//        OdfTextDocument documentoOdt;
+
+    public boolean guardarExamen(Examen e) {
+
+        try {
+            documentoOdtCabecera = OdfTextDocument.loadDocument(fileCabecera);
+            logger.debug("Archivo leido: " + fileCabecera);
+        } catch (Exception ex) {
+            logger.error("Error al leer el archivo .odt " + fileCabecera.toString() + " " + ex.getMessage());
+            return false;
+        }
+        
 //        File documentoExamen;
 //        OdfContentDom dom;
         try {
             //Cargamos la plantilla que tiene la cabecera
 //            documentoOdt = (OdfTextDocument) OdfTextDocument.loadDocument(fileBanco);
 //            dom = documentoOdt.getContentDom();
+            /////////////////////////////////////
             // Reemplazamos el tag de la version
             TextNavigation search = new TextNavigation(tagVersion, documentoOdtCabecera);
             while (search.hasNext()) {
                 TextSelection selection = search.next();
                 selection.replaceWith(e.getVersion());
             }
+            //////////////////////////
             // Añadimos las preguntas
             for (Pregunta p : e.getGrupoDePreguntas()) {
                 for (int i = 0; i < p.getParrafos().size(); i++) {
 //                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
 
-                    StyleStyleElement estiloDeParrafo = documentoOdtCabecera.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo());
-
-                    if (estiloDeParrafo == null) {
-                        estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(p.getParrafos().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
-                        estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
-                    } else {
-                        logger.debug("El estilo ya esta creado: " + estiloDeParrafo.getStyleNameAttribute());
-                    }
-
+                    //creamos el parrafo
                     OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
 
-                    parrafo.setStyleName(p.getParrafos().get(i).getNombreDeEstiloParrafo());
-
+                    //si tiene spans los añadimos
                     for (int i2 = 0; i2 < p.getParrafos().get(i).getTextosSpan().size(); i2++) {
-                        StyleStyleElement estiloDeSpan = documentoOdtCabecera.getStyleByName(OdfStyleFamily.Text, p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2));
+                        //creamos el estilo del span
+                        // cambiamos los nombres de los estilos para que no se sobreescriban
+                        String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
+                        if (nuevoNombreDeEstilo.equals("")) {
+                            return false;
+                        }
+                        OdfStyle estiloDeSpan = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Text);
+                        estiloDeSpan.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Text, p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2)).getStylePropertiesDeep());
 
-                        if (estiloDeSpan == null) {
-                            estiloDeSpan = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
-                            estiloDeSpan.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Text, p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2)).getStylePropertiesDeep());
+                        //creamos el nodo span
+                        TextSpanElement ts = parrafo.newTextSpanElement();
+
+                        // si es el primer parrafo y primer span añadimos el numero de pregunta
+                        //añadimos el texto de la pregunta
+                        if (i == 0 && i2 == 0) {
+                            ts.setTextContent((e.getGrupoDePreguntas().indexOf(p) + 1) + ".  " + p.getParrafos().get(i).getTextosSpan().get(i2));
                         } else {
-                            logger.debug("El estilo ya esta creado: " + estiloDeSpan.getStyleNameAttribute());
+                            ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
                         }
 
-                        TextSpanElement ts = parrafo.newTextSpanElement();
-                        ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
-                        ts.setStyleName(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2));
+                        //le ponemos el estilo al span
+                        ts.setStyleName(nuevoNombreDeEstilo);
                     }
-                    //si no tiene nodos span ponemos le texto del parrafo
+                    //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getParrafos().get(i).getTextosSpan().size() == 0) {
-                        parrafo.setTextContent(p.getParrafos().get(i).getTextoTotal());
+                        // si es el primer parrafo añadimos el numero de pregunta
+                        if (i == 0) {
+                            parrafo.setTextContent((e.getGrupoDePreguntas().indexOf(p) + 1) + ".  " + p.getParrafos().get(i).getTextoTotal());
+                        } else {
+                            parrafo.setTextContent(p.getParrafos().get(i).getTextoTotal());
+                        }
+
                     }
+
+                    //creamos el estilo del parrafo
+                    // cambiamos los nombres de los estilos para que no se sobreescriban
+                    String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
+                    if (nuevoNombreDeEstilo.equals("")) {
+                        return false;
+                    }
+                    OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
+                    estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
+
+                    //le aplicamos el estilo al parrafo
+                    parrafo.setStyleName(nuevoNombreDeEstilo);
 
 //                    dom.getRootElement().appendChild(par);
 //                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
 //                    documentoOdtBanco.newParagraph().addContent(t); funciona
                 }
 
-//todo: escribir respuestas
-//                for (Parrafo r : p.getRespuestasDePregunta()) {
-//                    for (int i = 0; i < r.getTextosSpan().size(); i++) {
-////                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
-//
-//                        StyleStyleElement estiloDeParrafo = documentoOdtCabecera.getStyleByName(OdfStyleFamily.Paragraph, p.getNombresDeEstilosParrafos().get(i));
-//
-//                        if (estiloDeParrafo == null) {
-//                            estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(p.getNombresDeEstilosParrafos().get(i), OdfStyleFamily.Paragraph);
-//                            estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getNombresDeEstilosParrafos().get(i)).getStylePropertiesDeep());
-//                        } else {
-//                            logger.debug("El estilo ya esta creado: " + estiloDeParrafo.getStyleNameAttribute());
-//                        }
-//
-//                        OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
-//
-//                        parrafo.setStyleName(p.getNombresDeEstilosParrafos().get(i));
-//
-//                        for (int i2 = 0; i2 < p.getParrafos().get(i).getTextosSpan().size(); i2++) {
-//                            TextSpanElement ts = parrafo.newTextSpanElement();
-//                            ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
-//                            ts.setStyleName(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2));
-//                        }
-//
-////                    dom.getRootElement().appendChild(par);
-////                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
-////                    documentoOdtBanco.newParagraph().addContent(t); funciona
-//                    }
-//
-//                }
+                //////////////////////////
+                //Añadimos las respuestas
+                for (int i = 0; i < p.getRespuestasDePregunta().size(); i++) {
+//                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
 
+                    //creamos el parrafo
+                    OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
 
-//                documentoOdt.insertDocument(documentoOdt, documentoOdt.getDocumentPath());
-                //            documentoOdt.insertDocument();
+                    for (int i2 = 0; i2 < p.getRespuestasDePregunta().get(i).getTextosSpan().size(); i2++) {
+                        //creamos el estilo del span
+                        // cambiamos los nombres de los estilos para que no se sobreescriban
+                        String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
+                        if (nuevoNombreDeEstilo.equals("")) {
+                            return false;
+                        }
+                        OdfStyle estiloDeSpan = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Text);
+                        estiloDeSpan.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Text, p.getRespuestasDePregunta().get(i).getNombresDeEstilosTextosSpan().get(i2)).getStylePropertiesDeep());
+
+                        //creamos el nodo span
+                        TextSpanElement ts = parrafo.newTextSpanElement();
+                        // si es el primer span añadimos el numero de pregunta
+                        if (i2 == 0) {
+                            ts.setTextContent(letrasParaLasRespuestas[i] + ".  " + p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
+                        } else {
+                            ts.setTextContent(p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
+                        }
+
+                        //le aplicamos el estilo
+                        ts.setStyleName(nuevoNombreDeEstilo);
+                    }
+                    //si no tiene nodos span ponemos el texto del parrafo
+                    if (p.getRespuestasDePregunta().get(i).getTextosSpan().size() == 0) {
+                        // añadimos el numero de pregunta
+                        parrafo.setTextContent(letrasParaLasRespuestas[i] + ".  " + p.getRespuestasDePregunta().get(i).getTextoTotal());
+                    }
+
+                    //creamos el estilo del parrafo
+                    // cambiamos los nombres de los estilos para que no se sobreescriban
+                    String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
+                    if (nuevoNombreDeEstilo.equals("")) {
+                        return false;
+                    }
+                    OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
+                    estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getRespuestasDePregunta().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
+
+                    //le aplicamos el estilo al parrafo
+                    parrafo.setStyleName(nuevoNombreDeEstilo);
+
+//                    dom.getRootElement().appendChild(par);
+//                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
+//                    documentoOdtBanco.newParagraph().addContent(t); funciona
+                }
             }
+
             // Creamos los directorios para el archivo de salida
             pathDirectorioDeSalida.toFile().mkdirs();
             // Creamos el archivo del examen
@@ -409,6 +481,7 @@ public class LectorEscritorDeOdt {
 //            maestro.insertContentFromDocumentAfter(esclavo, maestro.getParagraphByReverseIndex(0, false), true);
 //            maestro.save(archivoMaestro);
 //        }
+        return true;
     }
 
 

@@ -9,7 +9,7 @@ public class Pregunta {
         this.respuestasDePregunta = new ArrayList<>();
     }
 
-    public Pregunta(ArrayList<Parrafo> parrafos, ArrayList<String> nombresDeEstilosParrafos, ArrayList<Parrafo> respuestasDePregunta) {
+    public Pregunta(ArrayList<Parrafo> parrafos, ArrayList<Parrafo> respuestasDePregunta) {
         this.parrafos = parrafos;
         this.respuestasDePregunta = respuestasDePregunta;
     }
