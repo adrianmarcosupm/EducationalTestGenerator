@@ -3,6 +3,7 @@ import org.apache.logging.log4j.Logger;
 import org.odftoolkit.odfdom.doc.OdfTextDocument;
 import org.odftoolkit.odfdom.dom.element.text.TextSpanElement;
 import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
+import org.odftoolkit.odfdom.incubator.doc.draw.OdfDrawFrame;
 import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextParagraph;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextSpan;
@@ -35,6 +36,15 @@ public class LectorEscritorDeOdt {
     private static final char[] letrasParaLasRespuestas = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
             'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 
+    /* Adaptaciones especiales */
+    private boolean dificultadAdaptada;
+    private int dificultadMinima;
+    private int dificultadMaxima;
+    private boolean tamanioDeLetraAdaptadoSiNo;
+    private int tamanioDeLetraAdaptado;
+    private int tamanioMinimoDeLetra;
+
+
     // Constructor
     public LectorEscritorDeOdt(File banco, File cabecera, Path directorioAEscribir) {
         this.fileBanco = banco;
@@ -48,6 +58,30 @@ public class LectorEscritorDeOdt {
             logger.error("Error al leer el archivo .odt " + fileBanco.toString() + " " + ex.getMessage());
         }
 
+    }
+
+    public void setDificultadAdaptada(boolean dificultadAdaptada) {
+        this.dificultadAdaptada = dificultadAdaptada;
+    }
+
+    public void setDificultadMinima(int dificultadMinima) {
+        this.dificultadMinima = dificultadMinima;
+    }
+
+    public void setDificultadMaxima(int dificultadMaxima) {
+        this.dificultadMaxima = dificultadMaxima;
+    }
+
+    public void setTamanioDeLetraAdaptadoSiNo(boolean tamanioDeLetraAdaptadoSiNo) {
+        this.tamanioDeLetraAdaptadoSiNo = tamanioDeLetraAdaptadoSiNo;
+    }
+
+    public void setTamanioDeLetraAdaptado(int tamanioDeLetraAdaptado) {
+        this.tamanioDeLetraAdaptado = tamanioDeLetraAdaptado;
+    }
+
+    public void setTamanioMinimoDeLetra(int tamanioMinimoDeLetra) {
+        this.tamanioMinimoDeLetra = tamanioMinimoDeLetra;
     }
 
     public ArrayList<Pregunta> obtenerPreguntas(ArrayList<Integer> numerosDePregunta) {
@@ -110,6 +144,10 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
+                        //todo buscamos recursivamente imagenes, pueden estar en un p o en un span dentro de un p
+//                        List<OdfDrawImage> l = OdfDrawImage.getImages(documentoOdtBanco);
+//                        for (OdfDrawImage d : documentoOdtBanco)
+//                            logger.info(d.toString());
                         // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
@@ -140,6 +178,11 @@ public class LectorEscritorDeOdt {
 //                                    System.out.println(nodosHijos.item(i).getLocalName()); //span todo quitar
 //                                    System.out.println(nodosHijos.item(i).getNodeName()); //text:span
 //                                    System.out.println(nodosHijos.item(i).getTextContent()); todo end quitar
+                                    if (nodosHijos.item(i) instanceof OdfDrawFrame) {
+//todo
+                                        logger.info(nodosHijos.item(i).toString());
+
+                                    }
                                     if (nodosHijos.item(i) instanceof OdfTextSpan) {
                                         OdfTextSpan ts = (OdfTextSpan) nodosHijos.item(i);
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getTextosSpan().add(ts.getTextContent());
@@ -327,7 +370,7 @@ public class LectorEscritorDeOdt {
             logger.error("Error al leer el archivo .odt " + fileCabecera.toString() + " " + ex.getMessage());
             return false;
         }
-        
+
 //        File documentoExamen;
 //        OdfContentDom dom;
         try {
@@ -358,7 +401,17 @@ public class LectorEscritorDeOdt {
                         if (nuevoNombreDeEstilo.equals("")) {
                             return false;
                         }
+
                         OdfStyle estiloDeSpan = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Text);
+
+                        //ponemos el tamaño de letra minimo
+                        if (estiloDeSpan.getAttribute("style:font-size") < this.tamanioMinimoDeLetra) {
+                            logger.warn("El tamaño del texto: " + p.getParrafos().get(i).getTextosSpan().get(i2) + " es " + estiloDeSpan.getAttribute("style:font-size") + ". Se escribirá con el mínimo: " + this.tamanioMinimoDeLetra);
+                            estiloDeSpan.setAttribute("style:font-size", String.valueOf(this.tamanioMinimoDeLetra));
+                            estiloDeSpan.setAttribute("style:font-size-asian", String.valueOf(this.tamanioMinimoDeLetra));
+                            estiloDeSpan.setAttribute("style:font-size-complex", String.valueOf(this.tamanioMinimoDeLetra));
+                        }
+
                         estiloDeSpan.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Text, p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2)).getStylePropertiesDeep());
 
                         //creamos el nodo span
@@ -374,6 +427,7 @@ public class LectorEscritorDeOdt {
 
                         //le ponemos el estilo al span
                         ts.setStyleName(nuevoNombreDeEstilo);
+
                     }
                     //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getParrafos().get(i).getTextosSpan().size() == 0) {
@@ -393,8 +447,12 @@ public class LectorEscritorDeOdt {
                         return false;
                     }
                     OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
+                    //todo test
+                    if (!p.getParrafos().get(i).getNombreDeEstiloParrafo().equals(estiloDeParrafo.getStyleNameAttribute())) {
+                        logger.info("SIUUU " + p.getParrafos().get(i).getNombreDeEstiloParrafo() + " " + estiloDeParrafo.getStyleNameAttribute());
+                    }
                     estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
-
+                    logger.info("DES " + estiloDeParrafo.getStyleNameAttribute());//todo endtest
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
 
