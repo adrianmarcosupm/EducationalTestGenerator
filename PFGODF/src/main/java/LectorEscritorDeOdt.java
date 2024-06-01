@@ -403,15 +403,6 @@ public class LectorEscritorDeOdt {
                         }
 
                         OdfStyle estiloDeSpan = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Text);
-
-                        //ponemos el tamaño de letra minimo
-                        if (estiloDeSpan.getAttribute("style:font-size") < this.tamanioMinimoDeLetra) {
-                            logger.warn("El tamaño del texto: " + p.getParrafos().get(i).getTextosSpan().get(i2) + " es " + estiloDeSpan.getAttribute("style:font-size") + ". Se escribirá con el mínimo: " + this.tamanioMinimoDeLetra);
-                            estiloDeSpan.setAttribute("style:font-size", String.valueOf(this.tamanioMinimoDeLetra));
-                            estiloDeSpan.setAttribute("style:font-size-asian", String.valueOf(this.tamanioMinimoDeLetra));
-                            estiloDeSpan.setAttribute("style:font-size-complex", String.valueOf(this.tamanioMinimoDeLetra));
-                        }
-
                         estiloDeSpan.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Text, p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2)).getStylePropertiesDeep());
 
                         //creamos el nodo span
@@ -427,7 +418,6 @@ public class LectorEscritorDeOdt {
 
                         //le ponemos el estilo al span
                         ts.setStyleName(nuevoNombreDeEstilo);
-
                     }
                     //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getParrafos().get(i).getTextosSpan().size() == 0) {
@@ -447,12 +437,7 @@ public class LectorEscritorDeOdt {
                         return false;
                     }
                     OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
-                    //todo test
-                    if (!p.getParrafos().get(i).getNombreDeEstiloParrafo().equals(estiloDeParrafo.getStyleNameAttribute())) {
-                        logger.info("SIUUU " + p.getParrafos().get(i).getNombreDeEstiloParrafo() + " " + estiloDeParrafo.getStyleNameAttribute());
-                    }
                     estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
-                    logger.info("DES " + estiloDeParrafo.getStyleNameAttribute());//todo endtest
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
 
@@ -509,19 +494,104 @@ public class LectorEscritorDeOdt {
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
 
+
 //                    dom.getRootElement().appendChild(par);
 //                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
 //                    documentoOdtBanco.newParagraph().addContent(t); funciona
                 }
             }
 
+            //aplicamos el tamaño minimo de letra si es necesario
+            //para estilos
+            for (int indexEstilo = 0; indexEstilo < documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").getLength(); indexEstilo++) {
+                Node propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
+                if (propDeEstilo != null) {
+                    if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
+                        logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
+                        if (propDeEstilo != null) {
+                            propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        }
+                        propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-complex");
+                        if (propDeEstilo != null) {
+                            propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        }
+                    }
+                }
+            }
+            //para elementos
+            for (int indexEstilo = 0; indexEstilo < documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").getLength(); indexEstilo++) {
+                Node propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
+                if (propDeEstilo != null) {
+                    if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
+                        logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
+                        if (propDeEstilo != null) {
+                            propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        }
+                        propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-complex");
+                        if (propDeEstilo != null) {
+                            propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
+                        }
+                    }
+                }
+            }
+
             // Creamos los directorios para el archivo de salida
             pathDirectorioDeSalida.toFile().mkdirs();
             // Creamos el archivo del examen
+            // sin adaptar
             File documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + e.getVersion() + ".odt").toString());
             documentoOdtCabecera.save(documentoExamen);
-
             logger.info("Examen guardado: Version " + e.getVersion() + " en: " + documentoExamen);
+
+            //adaptado
+            if (this.tamanioDeLetraAdaptadoSiNo) {
+                //aplicamos el tamaño adaptado de letra si es necesario
+                //para estilos
+                for (int indexEstilo = 0; indexEstilo < documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").getLength(); indexEstilo++) {
+                    Node propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
+                    if (propDeEstilo != null) {
+                        if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
+                            propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
+                            if (propDeEstilo != null) {
+                                propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            }
+                            propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-complex");
+                            if (propDeEstilo != null) {
+                                propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            }
+                        }
+                    }
+                }
+                //para elementos
+                for (int indexEstilo = 0; indexEstilo < documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").getLength(); indexEstilo++) {
+                    Node propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
+                    if (propDeEstilo != null) {
+                        if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
+                            propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
+                            if (propDeEstilo != null) {
+                                propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            }
+                            propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-complex");
+                            if (propDeEstilo != null) {
+                                propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
+                            }
+                        }
+                    }
+                }
+
+                //ponemos la version _ad (adaptada)
+                e.setVersion(e.getVersion() + "_ad");
+                documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + e.getVersion() + ".odt").toString());
+                documentoOdtCabecera.save(documentoExamen);
+                logger.info("Examen guardado: Version " + e.getVersion() + " con tamaño de letra: " + this.tamanioDeLetraAdaptado + " en: " + documentoExamen);
+            }
+
         } catch (Exception ex) {
             logger.error("Error guardando examen: " + ex.getMessage());
         }
