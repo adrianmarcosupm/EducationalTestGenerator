@@ -35,12 +35,12 @@ public class Generador {
     private final String stringAjusteDificultadMinima = "Dificultad adaptada mínima";
     private int dificultadMaxima;
     private final String stringAjusteDificultadMaxima = "Dificultad adaptada máxima";
-    private boolean tamanioVariableDeLetra;
-    private final String stringAjusteTamanioVariableDeLetra = "Tamaño variable de letra si/no";
+    private boolean tamanioDeLetraAdaptadoSiNo;
+    private final String stringAjusteTamanioDeLetraAdaptadoSiNo = "Tamaño de letra adaptado si/no";
+    private int tamanioDeLetraAdaptado;
+    private final String stringAjusteTamanioDeLetraAdaptado = "Tamaño de letra adaptado";
     private int tamanioMinimoDeLetra;
     private final String stringAjusteTamanioMinimoDeLetra = "Tamaño mínimo de letra";
-    private int tamanioMaximoDeLetra;
-    private final String stringAjusteTamanioMaximoDeLetra = "Tamaño máximo de letra";
 
 
     // Logger para mostrar mensajes al usuario
@@ -88,12 +88,12 @@ public class Generador {
                         dificultadMinima = Integer.parseInt(valor);
                     } else if (ajuste.equals(stringAjusteDificultadMaxima)) {
                         dificultadMaxima = Integer.parseInt(valor);
-                    } else if (ajuste.equals(stringAjusteTamanioVariableDeLetra)) {
-                        tamanioVariableDeLetra = getBoolean(valor);
+                    } else if (ajuste.equals(stringAjusteTamanioDeLetraAdaptadoSiNo)) {
+                        tamanioDeLetraAdaptadoSiNo = getBoolean(valor);
+                    } else if (ajuste.equals(stringAjusteTamanioDeLetraAdaptado)) {
+                        tamanioDeLetraAdaptado = Integer.parseInt(valor);
                     } else if (ajuste.equals(stringAjusteTamanioMinimoDeLetra)) {
                         tamanioMinimoDeLetra = Integer.parseInt(valor);
-                    } else if (ajuste.equals(stringAjusteTamanioMaximoDeLetra)) {
-                        tamanioMaximoDeLetra = Integer.parseInt(valor);
                     }
                 }
             }
@@ -118,9 +118,9 @@ public class Generador {
         logger.info(stringAjusteDificultadAdaptada + " : " + dificultadAdaptada);
         logger.info(stringAjusteDificultadMinima + " : " + dificultadMinima);
         logger.info(stringAjusteDificultadMaxima + " : " + dificultadMaxima);
-        logger.info(stringAjusteTamanioVariableDeLetra + " : " + tamanioVariableDeLetra);
+        logger.info(stringAjusteTamanioDeLetraAdaptadoSiNo + " : " + tamanioDeLetraAdaptadoSiNo);
+        logger.info(stringAjusteTamanioDeLetraAdaptado + " : " + tamanioDeLetraAdaptado);
         logger.info(stringAjusteTamanioMinimoDeLetra + " : " + tamanioMinimoDeLetra);
-        logger.info(stringAjusteTamanioMaximoDeLetra + " : " + tamanioMaximoDeLetra);
         logger.info(lineaDeGuiones);
     }
 
@@ -128,6 +128,14 @@ public class Generador {
         Random random = new Random();
         LectorEscritorDeOdt lectorEscritorDeOdt = new LectorEscritorDeOdt(bancoDePreguntas, plantilla, directorioSalida);
 //        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
+
+        //Ponemos los ajustes de adaptaciones especiales al lector de odt
+        lectorEscritorDeOdt.setDificultadAdaptada(this.dificultadAdaptada);
+        lectorEscritorDeOdt.setDificultadMinima(this.dificultadMinima);
+        lectorEscritorDeOdt.setDificultadMaxima(this.dificultadMaxima);
+        lectorEscritorDeOdt.setTamanioDeLetraAdaptadoSiNo(this.tamanioDeLetraAdaptadoSiNo);
+        lectorEscritorDeOdt.setTamanioDeLetraAdaptado(this.tamanioDeLetraAdaptado);
+        lectorEscritorDeOdt.setTamanioMinimoDeLetra(this.tamanioMinimoDeLetra);
 
         ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
         ArrayList<Pregunta> preguntasParaMezclar; // Donde guardamos las preguntas para mezclarlas
@@ -229,8 +237,7 @@ public class Generador {
         logger.info("Guardando exámenes");
         logger.info(lineaDeGuiones);
         for (Examen e : examenes) {
-            if (!lectorEscritorDeOdt.guardarExamen(e))
-            {
+            if (!lectorEscritorDeOdt.guardarExamen(e)) {
                 return;
             }
         }
