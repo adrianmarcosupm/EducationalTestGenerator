@@ -4,9 +4,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 public class Generador {
@@ -58,7 +61,40 @@ public class Generador {
 
     // Cargar archivo de configuracion inicial
     private void cargarConfiguracion() {
+        if (!Files.exists(Paths.get("GeneradorConfiguracion.txt"))) {
+            logger.warn("Creando archivo de configuración: GeneradorConfiguracion.txt");
+            try {
+                FileWriter fw = new FileWriter("GeneradorConfiguracion.txt");
+                fw.write("*****************************************************************\n");
+                fw.write("*\t\t\tAjustes generales\t\t\t*\n");
+                fw.write("*****************************************************************\n");
+                fw.write("Archivo de plantilla \t\t\t= plantilla.odt\n");
+                fw.write("Archivo del banco de preguntas \t\t= bancotemporal.odt\n");
+                fw.write("Directorio para guardar los exámenes \t= aqui\n");
+                fw.write("\n");
+                fw.write("*****************************************************************\n");
+                fw.write("*\t\t\tAjustes de exámen\t\t\t*\n");
+                fw.write("*****************************************************************\n");
+                fw.write("Número máximo de versiones            =  4\n");
+                fw.write("Temas a incluir (separados por comas) =  1,2,3,4,5,6,7,8,9,10\n");
+                fw.write("Número de preguntas                   =  15\n");
+                fw.write("\n");
+                fw.write("*****************************************************************\n");
+                fw.write("*\t\t     Adaptaciones especiales\t\t\t*\n");
+                fw.write("*****************************************************************\n");
+                fw.write("Dificultad adaptada        \t= si\n");
+                fw.write("Dificultad adaptada mínima \t= 60\n");
+                fw.write("Dificultad adaptada máxima \t= 70\n");
+                fw.write("Tamaño de letra adaptado si/no \t= si\n");
+                fw.write("Tamaño de letra adaptado       \t= 11\n");
+                fw.write("Tamaño mínimo de letra         \t= 9\n");
 
+                fw.flush();
+                fw.close();
+            } catch (Exception e) {
+                logger.error("Error creando archivo de configuración. " + e.getMessage());
+            }
+        }
 
         try {
             BufferedReader reader = new BufferedReader(new FileReader("GeneradorConfiguracion.txt"));
@@ -97,10 +133,29 @@ public class Generador {
                     }
                 }
             }
-            // Imprimimos los valores para que los vea el usuario
-            imprimirConfiguracion();
         } catch (Exception e) {
             logger.error("Error al leer el archivo de configuracion: " + e.getMessage());
+            logger.error("Usando valores por defecto");
+
+            plantilla = new File("plantilla.odt");
+            bancoDePreguntas = new File("bancotemporal.odt");
+            directorioSalida = Paths.get("aqui");
+            numMaxDeVersiones = 4;
+            temas = new ArrayList<>();
+            for (int i = 1; i < 11; i++) {
+                temas.add(i);
+            }
+            numPreguntas = 15;
+            dificultadAdaptada = false;
+            dificultadMinima = 60;
+            dificultadMaxima = 70;
+            tamanioDeLetraAdaptadoSiNo = true;
+            tamanioDeLetraAdaptado = 11;
+            tamanioMinimoDeLetra = 9;
+        } finally {
+            // Imprimimos los valores para que los vea el usuario
+            imprimirConfiguracion();
+            //
         }
     }
 
@@ -138,36 +193,63 @@ public class Generador {
         lectorEscritorDeOdt.setTamanioMinimoDeLetra(this.tamanioMinimoDeLetra);
 
         ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
-        ArrayList<Pregunta> preguntasParaMezclar; // Donde guardamos las preguntas para mezclarlas
-        ArrayList<Integer> preguntasACoger = new ArrayList<>(); // La lista con los numeros de preguntas que vamos a querer
+        HashMap<Integer, ArrayList<Pregunta>> preguntasPorTemas; // Donde guardamos todas las preguntas del banco que cumplen las condiciones
+        ArrayList<Pregunta> preguntasParaMezclar = new ArrayList<>(); // Donde guardamos las preguntas para mezclarlas
         int numPreguntasDelBanco = lectorEscritorDeOdt.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
         if (numPreguntasDelBanco < numPreguntas) {
             logger.error("No hay tantas preguntas en el banco de preguntas.");
             return;
         }
-        // Generamos una secuencia de numeros entre 1 y las preguntas del banco, para seleccionar preguntas
-        // Para no coger repetidas
-        ArrayList<Integer> candidatos = new ArrayList<>();
-        for (int i = 1; i <= numPreguntasDelBanco; i++) {
-            candidatos.add(i);
-        }
-        for (int i = 0; i < numPreguntas; i++) {
-            // Añadimos la pregunta a la lista de preguntas que queremos
-            int candidato = random.nextInt(0, candidatos.size());
-            preguntasACoger.add(candidatos.get(candidato));
-            candidatos.remove(candidato);
-        }
-        logger.debug("Tamaño de preguntasACoger: " + preguntasACoger.size());
 
-        // Obtenemos esas preguntas del banco de preguntas
-        preguntasParaMezclar = lectorEscritorDeOdt.obtenerPreguntas(preguntasACoger);
+        //Obtenemos sólo las preguntas del banco de preguntas que cumplen las condiciones
+        preguntasPorTemas = lectorEscritorDeOdt.obtenerPreguntas(this.temas);
 
-        if (preguntasParaMezclar == null) {
+        if (preguntasPorTemas == null)
+        {
             return; // Los errores son mostrados antes de llegar aqui
         }
 
-        logger.debug("Tamaño de preguntasParaMezclar: " + preguntasParaMezclar.size());
+        //comprobamos que todos los temas tienen al menos alguna pregunta y entre todas suman el numero de preguntas que queremos
+        int nPTemp = 0;
+        for (Integer clave : preguntasPorTemas.keySet()) {
+            if (preguntasPorTemas.get(clave).size() == 0) {
+                logger.warn("No se han encontrado preguntas del tema " + clave + " que cumplan los requisitos.");
+            } else {
+                nPTemp = nPTemp + preguntasPorTemas.get(clave).size();
+            }
+        }
+        if (nPTemp < numPreguntas) {
+            logger.error("No se han encontrado " + numPreguntas + " preguntas que cumplan los requisitos.");
+            return;
+        }
+
+        // Cogemos una aleatoria de un tema aleatorio para que queden proporcionales
+        ArrayList<Integer> temasCandidatos = new ArrayList<>();
+        // Generamos numeros entre 0 y el numero de preguntas de un tema
+        for (int i = 0; i < numPreguntas; i++) {
+            //si ya hemos cogido preguntas de todos los temas
+            if (temasCandidatos.size() == 0) {
+                for (Integer tema : preguntasPorTemas.keySet()) {
+                    //si quedan preguntas de ese tema lo añadimos
+                    if (preguntasPorTemas.get(tema).size() != 0) {
+                        temasCandidatos.add(tema);
+                    }
+                }
+            }
+            // Añadimos la pregunta a la lista de preguntas que queremos
+            int TcandidatoIndex = random.nextInt(0, temasCandidatos.size());
+            Integer Tcandidato = temasCandidatos.get(TcandidatoIndex);
+            int Pcandidata = random.nextInt(0, preguntasPorTemas.get(Tcandidato).size());
+            preguntasParaMezclar.add(preguntasPorTemas.get(Tcandidato).get(Pcandidata));
+            // Las eliminamos para no coger repetidas
+            temasCandidatos.remove(TcandidatoIndex);
+            preguntasPorTemas.get(Tcandidato).remove(Pcandidata);
+            if (preguntasPorTemas.get(Tcandidato).size() == 0)
+            {
+                preguntasPorTemas.remove(Tcandidato);
+            }
+        }
 
         ////////////////////////////////////////////////////
         // Calculamos el número de versiones que va a haber.
@@ -199,7 +281,6 @@ public class Generador {
         Pregunta preguntaTemp;
         Parrafo parrafoTemp;
         // Para cada version
-        //todo: alomejro copiarecursiva de examen?
         for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
             examenTemp = new Examen();
             examenTemp.setVersion(obtenerVersion(indexExamen, numVersionesDiferentes));

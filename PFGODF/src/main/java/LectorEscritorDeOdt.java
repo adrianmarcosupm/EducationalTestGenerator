@@ -15,7 +15,8 @@ import org.w3c.dom.NodeList;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
 
 
 public class LectorEscritorDeOdt {
@@ -27,6 +28,7 @@ public class LectorEscritorDeOdt {
     private final String tagVersion = "\\{\\{\\¡VERSION\\¡\\}\\}";
     private final String tagPregunta = "\\{\\{\\¡PREGUNTA\\¡\\}\\}";
     private final String tagRespuestas = "\\{\\{\\¡RESPUESTAS\\¡\\}\\}";
+    private final String tagMetadatos = "\\{\\{\\¡METADATOS\\¡\\}\\}";
     File fileBanco;
     File fileCabecera;
     Path pathDirectorioDeSalida;
@@ -84,12 +86,16 @@ public class LectorEscritorDeOdt {
         this.tamanioMinimoDeLetra = tamanioMinimoDeLetra;
     }
 
-    public ArrayList<Pregunta> obtenerPreguntas(ArrayList<Integer> numerosDePregunta) {
+    public HashMap<Integer, ArrayList<Pregunta>> obtenerPreguntas(ArrayList<Integer> temas) {
         // Borramos las barras de las etiquetas
         String tagPNoRegex = tagPregunta.replace("\\", "");
         String tagRNoRegex = tagRespuestas.replace("\\", "");
+        String tagMNoRegex = tagMetadatos.replace("\\", "");
 
-        ArrayList<Pregunta> preguntasReturn = new ArrayList<>(); // La lista de preguntas que devolvemos al generador
+        HashMap<Integer, ArrayList<Pregunta>> preguntasReturn = new HashMap<>(); // La lista de preguntas que devolvemos al generador
+        for (Integer t : temas) {
+            preguntasReturn.put(t, new ArrayList<>());
+        }
         Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
         Parrafo parrafoTemp = null; // Guardamos la respuesta que encontramos para añadirla a la lista de respuestas
 
@@ -101,7 +107,6 @@ public class LectorEscritorDeOdt {
         OdfTextParagraph parrafo; // Tratamos el nodo como un parrafo
         int indexNodo = 0; // Numero de nodo por el que empieza la busqueda
         String lineaLeida = ""; // La linea del documento .odt que leemos
-        int contadorDePreguntas = 0; // Para numerar las preguntas del banco
 
         try {
             documentoOdtBanco = OdfTextDocument.loadDocument(fileBanco);
@@ -129,6 +134,8 @@ public class LectorEscritorDeOdt {
                             sigueBuscando = false;
                         } else if (lineaLeida.equals(tagRNoRegex)) {
                             logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
+                        } else if (lineaLeida.equals(tagMNoRegex)) {
+                            logger.warn("El documento comienza con metadatos que no están asignadas a ninguna pregunta.");
                         }
                     }
                 }
@@ -163,6 +170,14 @@ public class LectorEscritorDeOdt {
                                 ////////////////////////////////
                                 // Tag de RESPUESTAS encontrado
                                 if (!textoEncontrado) {
+                                    logger.error("No se ha encontrado texto para una pregunta.");
+                                }
+                                sigueBuscando = false;
+                            } else if (lineaLeida.equals(tagMNoRegex)) {
+                                if (textoEncontrado) {
+                                    logger.error("El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    exito = false;
+                                } else {
                                     logger.error("No se ha encontrado texto para una pregunta.");
                                 }
                                 sigueBuscando = false;
@@ -234,6 +249,9 @@ public class LectorEscritorDeOdt {
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (!textoEncontrado) {
                                     logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                } else {
+                                    logger.error("Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    exito = false;
                                 }
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagRNoRegex)) {
@@ -242,6 +260,13 @@ public class LectorEscritorDeOdt {
                                 } else {
                                     logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
                                 }
+                            } else if (lineaLeida.equals(tagMNoRegex)) {
+                                ////////////////////////////
+                                // Tag Metadatos encontrado
+                                if (!textoEncontrado) {
+                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                }
+                                sigueBuscando = false;
                             } else {
                                 // Añadimos una nueva respuesta
                                 preguntaTemp.getRespuestasDePregunta().add(new Parrafo());
@@ -285,32 +310,108 @@ public class LectorEscritorDeOdt {
                 if (!exito) {
                     return null;
                 }
+                //////////////////////////////////////
+                // Buscamos el texto de los metadatos
+                exito = false;
+                sigueBuscando = true;
+                textoEncontrado = false;
+                for (; (indexNodo < nodeTextPList.getLength()) && sigueBuscando == true; indexNodo++) {
+                    nodo = nodeTextPList.item(indexNodo);
+                    if (nodo instanceof OdfTextParagraph) {
+                        parrafo = (OdfTextParagraph) nodo;
+                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
+                        if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
+                            if (lineaLeida.equals(tagPNoRegex)) {
+                                ///////////////////////////
+                                // Tag PREGUNTA encontrado
+                                if (!textoEncontrado) {
+                                    logger.error("Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                }
+                                sigueBuscando = false;
+                            } else if (lineaLeida.equals(tagRNoRegex)) {
+                                logger.error("El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                exito = false;
+                                sigueBuscando = false;
+                            } else if (lineaLeida.equals(tagMNoRegex)) {
+                                ////////////////////////////
+                                // Tag Metadatos encontrado
+                                if (!textoEncontrado) {
+                                    logger.warn("Varias etiquetas METADATOS seguidas");
+                                } else {
+                                    logger.warn("Etiqueta METADATOS dentro de los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                }
+                            } else {
+                                // Añadimos un nuevo metadato
+                                if (lineaLeida.split(" ").length > 1) {
+                                    preguntaTemp.getMetadatos().put(lineaLeida.split(" ")[0].toLowerCase(Locale.ROOT), lineaLeida.split(" ")[1].toLowerCase(Locale.ROOT));
 
-                contadorDePreguntas++;
+                                    textoEncontrado = true;
+                                    exito = true;
+                                } else {
+                                    logger.error("Los metadatos deben tener el formato nombre valor separados por espacio. Formato incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    exito = false;
+                                    sigueBuscando = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!exito) {
+                    return null;
+                }
 
-                // Si la pregunta encontrada esta en la lista de las que queremos, la añadimos
-                //TODO: falta si es del tema que queremos o de la dificultad que queremos
-                if (numerosDePregunta.contains(contadorDePreguntas)) {
-                    int contadorDeRespuestas = 1; //TODO: Para debugear
-                    preguntasReturn.add(preguntaTemp);
-                    logger.debug("Pregunta añadida " + contadorDePreguntas + ": " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                // Si la pregunta tiene el tema y la dificultad que queremos, la añadimos
+                int temaTemp = -1;
+                int difTemp = -1;
+                try {
+                    if (preguntaTemp.getMetadatos().get("tema") != null) {
+                        temaTemp = Integer.valueOf(preguntaTemp.getMetadatos().get("tema"));
+                    } else {
+                        logger.error("La pregunta no tiene metadato tema: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                        return null;
+                    }
+                    if (this.dificultadAdaptada) {
+                        if (preguntaTemp.getMetadatos().get("dificultad") != null) {
+                            difTemp = Integer.valueOf(preguntaTemp.getMetadatos().get("dificultad"));
+                        } else {
+                            logger.error("La pregunta no tiene metadato dificultad: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                            return null;
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Error leyendo los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                    return null;
+                }
+
+                if (temas.contains(temaTemp) &&
+                        (
+                                (this.dificultadAdaptada &&
+                                        ((difTemp >= this.dificultadMinima) && (difTemp <= this.dificultadMaxima))
+                                ) || (!this.dificultadAdaptada)
+                        )
+                ) {
+                    preguntasReturn.get(Integer.valueOf(preguntaTemp.getMetadatos().get("tema"))).add(preguntaTemp);
+
+                    // para debug
+                    int contadorDeRespuestas = 1;
+                    logger.debug("Pregunta añadida: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
                     for (Parrafo r : preguntaTemp.getRespuestasDePregunta()) {
                         logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTextoTotal());
-                        contadorDeRespuestas++; //TODO: para debug
+                        contadorDeRespuestas++;
                     }
-
+                    //end para debug
                 }
 
-                // Si no hemos encontrado la ultima pregunta, seguimos buscando
-                if (!Collections.max(numerosDePregunta).equals(contadorDePreguntas)) {
-                    sigueBuscando = true;
-                    textoEncontrado = false;
-                    exito = false;
-                    // Hemos encontrado un tag de pregunta asi que lo volvemos a buscar para comenzar la busqueda
-                    if (indexNodo != nodeTextPList.getLength()) {
-                        indexNodo--;
-                    }
+                // seguimos buscando
+                sigueBuscando = true;
+                textoEncontrado = false;
+                exito = false;
+                // Si hemos encontrado un tag de pregunta asi lo volvemos a buscar para comenzar la busqueda
+                if (indexNodo != nodeTextPList.getLength()) {
+                    indexNodo--;
                 }
+
             }
         } catch (Exception ex) {
             logger.error("Error obteniendo preguntas: " + ex.getMessage());
@@ -507,7 +608,9 @@ public class LectorEscritorDeOdt {
                 Node propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                 if (propDeEstilo != null) {
                     if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
-                        logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        if (!this.tamanioDeLetraAdaptadoSiNo) {
+                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        }
                         propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
                         propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                         if (propDeEstilo != null) {
@@ -525,7 +628,9 @@ public class LectorEscritorDeOdt {
                 Node propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                 if (propDeEstilo != null) {
                     if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
-                        logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        if (!this.tamanioDeLetraAdaptadoSiNo) {
+                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                        }
                         propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
                         propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                         if (propDeEstilo != null) {
@@ -555,6 +660,7 @@ public class LectorEscritorDeOdt {
                     Node propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                     if (propDeEstilo != null) {
                         if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
+                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
                             propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
                             propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                             if (propDeEstilo != null) {
@@ -572,6 +678,7 @@ public class LectorEscritorDeOdt {
                     Node propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                     if (propDeEstilo != null) {
                         if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
+                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
                             propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
                             propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                             if (propDeEstilo != null) {
