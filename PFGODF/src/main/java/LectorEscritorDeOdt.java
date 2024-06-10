@@ -3,6 +3,8 @@ import org.apache.logging.log4j.Logger;
 import org.odftoolkit.odfdom.doc.OdfTextDocument;
 import org.odftoolkit.odfdom.dom.element.text.TextSpanElement;
 import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
+import org.odftoolkit.odfdom.dom.style.props.OdfParagraphProperties;
+import org.odftoolkit.odfdom.dom.style.props.OdfTextProperties;
 import org.odftoolkit.odfdom.incubator.doc.draw.OdfDrawFrame;
 import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextParagraph;
@@ -204,10 +206,10 @@ public class LectorEscritorDeOdt {
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
                                         //Guardamos el estilo del parrafo TODO quitar
-                                        logger.debug("getStyleName" + ts.getStyleName());
-                                        logger.debug("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
-                                        logger.debug("getAutomaticStyle" + ts.getAutomaticStyle());
-                                        logger.debug("getDocumentStyle" + ts.getDocumentStyle());
+                                        logger.trace("getStyleName" + ts.getStyleName());
+                                        logger.trace("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
+                                        logger.trace("getAutomaticStyle" + ts.getAutomaticStyle());
+                                        logger.trace("getDocumentStyle" + ts.getDocumentStyle());
                                         //////////////todo end quitar
                                     }
                                 }
@@ -217,10 +219,10 @@ public class LectorEscritorDeOdt {
                                 }
 
                                 // TODO quitar
-                                logger.debug("getStyleName" + parrafo.getStyleName());
-                                logger.debug("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                logger.debug("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                logger.debug("getDocumentStyle" + parrafo.getDocumentStyle());
+                                logger.trace("getStyleName" + parrafo.getStyleName());
+                                logger.trace("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                logger.trace("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                logger.trace("getDocumentStyle" + parrafo.getDocumentStyle());
                                 //////////////todo end quitar
                                 //Guardamos el estilo del parrafo
                                 preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
@@ -282,10 +284,10 @@ public class LectorEscritorDeOdt {
                                         preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
                                         //Guardamos el estilo del parrafo TODO quitar
-                                        logger.debug("getStyleName" + ts.getStyleName());
-                                        logger.debug("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
-                                        logger.debug("getAutomaticStyle" + ts.getAutomaticStyle());
-                                        logger.debug("getDocumentStyle" + ts.getDocumentStyle());
+                                        logger.trace("getStyleName" + ts.getStyleName());
+                                        logger.trace("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
+                                        logger.trace("getAutomaticStyle" + ts.getAutomaticStyle());
+                                        logger.trace("getDocumentStyle" + ts.getDocumentStyle());
                                         //////////////todo end quitar
                                     }
                                 }
@@ -294,10 +296,10 @@ public class LectorEscritorDeOdt {
                                     preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
                                 //Guardamos el estilo del parrafo TODO quitar
-                                logger.debug("getStyleName" + parrafo.getStyleName());
-                                logger.debug("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                logger.debug("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                logger.debug("getDocumentStyle" + parrafo.getDocumentStyle());
+                                logger.trace("getStyleName" + parrafo.getStyleName());
+                                logger.trace("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
+                                logger.trace("getAutomaticStyle" + parrafo.getAutomaticStyle());
+                                logger.trace("getDocumentStyle" + parrafo.getDocumentStyle());
                                 //////////////todo end quitar
                                 preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
 
@@ -485,8 +487,61 @@ public class LectorEscritorDeOdt {
                 TextSelection selection = search.next();
                 selection.replaceWith(e.getVersion());
             }
+
+            ////////////////////////////////////
+            //Creamos los estilos de las listas
+            //////////////////////
+            //creamos el estilo
+            org.odftoolkit.odfdom.incubator.doc.text.OdfTextListStyle estiloDeListaDePreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newListStyle("EstiloDeListaDePreguntas");
+            //creamos la numeracion para las preguntas
+            org.odftoolkit.odfdom.dom.element.text.TextListLevelStyleNumberElement numeracionListaPreguntas = estiloDeListaDePreguntas.newTextListLevelStyleNumberElement("1", 1);
+            numeracionListaPreguntas.setStyleNumSuffixAttribute(".");
+
+            org.odftoolkit.odfdom.dom.element.style.StyleListLevelPropertiesElement numeracionListaPreguntasProperties = numeracionListaPreguntas.newStyleListLevelPropertiesElement();
+//            numeracionListaPreguntasProperties.setTextSpaceBeforeAttribute("20.0025mm");
+            numeracionListaPreguntasProperties.setTextMinLabelWidthAttribute("6.35mm");
+            numeracionListaPreguntasProperties.setTextListLevelPositionAndSpaceModeAttribute("label-alignment");
+
+            org.odftoolkit.odfdom.dom.element.style.StyleListLevelLabelAlignmentElement numeracionListaPreguntasAlignment = numeracionListaPreguntasProperties.newStyleListLevelLabelAlignmentElement("listtab");
+            numeracionListaPreguntasAlignment.setTextLabelFollowedByAttribute("listtab");
+//            numeracionListaPreguntasAlignment.setFoMarginLeftAttribute("26.3525mm");
+//            numeracionListaPreguntasAlignment.setFoTextIndentAttribute("-6.35mm");
+
+            //creamos la numeracion para las Respuestas
+            org.odftoolkit.odfdom.dom.element.text.TextListLevelStyleNumberElement numeracionListaRespuestas = estiloDeListaDePreguntas.newTextListLevelStyleNumberElement("a", 2);
+            numeracionListaRespuestas.setStyleNumSuffixAttribute(".");
+            numeracionListaRespuestas.setStyleNumLetterSyncAttribute(true);
+
+            org.odftoolkit.odfdom.dom.element.style.StyleListLevelPropertiesElement numeracionListaRespuestasProperties = numeracionListaRespuestas.newStyleListLevelPropertiesElement();
+//            numeracionListaRespuestasProperties.setTextSpaceBeforeAttribute("19.05mm");
+            numeracionListaRespuestasProperties.setTextMinLabelWidthAttribute("6.35mm");
+            numeracionListaRespuestasProperties.setTextListLevelPositionAndSpaceModeAttribute("label-alignment");
+
+            org.odftoolkit.odfdom.dom.element.style.StyleListLevelLabelAlignmentElement numeracionListaRespuestasAlignment = numeracionListaRespuestasProperties.newStyleListLevelLabelAlignmentElement("listtab");
+            numeracionListaRespuestasAlignment.setTextLabelFollowedByAttribute("listtab");
+//            numeracionListaRespuestasAlignment.setFoMarginLeftAttribute("25.4mm");
+//            numeracionListaRespuestasAlignment.setFoTextIndentAttribute("-6.35mm");
+            //del texto de la numeracion
+            OdfStyle estiloNumeracionListaPreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle("estiloDelTextoListaPreguntas", OdfStyleFamily.Text);
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeight, "bold");
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeightAsian, "bold");
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeightComplex, "bold");
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontSize, "12pt");
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontSizeAsian, "12pt");
+            estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontSizeComplex, "12pt");
+            //le aplicamos el estilo a la numeracion
+            numeracionListaPreguntas.setTextStyleNameAttribute("estiloDelTextoListaPreguntas");
+            numeracionListaRespuestas.setTextStyleNameAttribute("estiloDelTextoListaPreguntas");
+
             //////////////////////////
             // Añadimos las preguntas
+
+            //creamos el elemento lista
+            org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDePreguntas = documentoOdtCabecera.getContentRoot().newTextListElement();
+            elementoListaDePreguntas.setTextContinueNumberingAttribute(true);
+            //aplicamos el estilo a la lista
+            elementoListaDePreguntas.setTextStyleNameAttribute("EstiloDeListaDePreguntas");
+
             for (Pregunta p : e.getGrupoDePreguntas()) {
                 for (int i = 0; i < p.getParrafos().size(); i++) {
 //                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
@@ -509,26 +564,15 @@ public class LectorEscritorDeOdt {
                         //creamos el nodo span
                         TextSpanElement ts = parrafo.newTextSpanElement();
 
-                        // si es el primer parrafo y primer span añadimos el numero de pregunta
                         //añadimos el texto de la pregunta
-                        if (i == 0 && i2 == 0) {
-                            ts.setTextContent((e.getGrupoDePreguntas().indexOf(p) + 1) + ".  " + p.getParrafos().get(i).getTextosSpan().get(i2));
-                        } else {
-                            ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
-                        }
+                        ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
 
                         //le ponemos el estilo al span
                         ts.setStyleName(nuevoNombreDeEstilo);
                     }
                     //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getParrafos().get(i).getTextosSpan().size() == 0) {
-                        // si es el primer parrafo añadimos el numero de pregunta
-                        if (i == 0) {
-                            parrafo.setTextContent((e.getGrupoDePreguntas().indexOf(p) + 1) + ".  " + p.getParrafos().get(i).getTextoTotal());
-                        } else {
-                            parrafo.setTextContent(p.getParrafos().get(i).getTextoTotal());
-                        }
-
+                        parrafo.setTextContent(p.getParrafos().get(i).getTextoTotal());
                     }
 
                     //creamos el estilo del parrafo
@@ -539,8 +583,21 @@ public class LectorEscritorDeOdt {
                     }
                     OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
                     estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getParrafos().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
+
+                    //alinear a la izquierda
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.MarginTop, "2.11582mm");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.MarginBottom, "0.35052mm");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.MarginLeft, "6.29666mm");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.LineHeight, "107%");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.TextIndent, "-6.29666mm");
+
+                    //creamos elemento dentro del elemento lista
+                    org.odftoolkit.odfdom.dom.element.text.TextListItemElement nuevoElementoEnLaListaDePreguntas = elementoListaDePreguntas.newTextListItemElement();
+                    nuevoElementoEnLaListaDePreguntas.appendChild(parrafo);
+
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
+
 
 //                    dom.getRootElement().appendChild(par);
 //                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
@@ -549,6 +606,14 @@ public class LectorEscritorDeOdt {
 
                 //////////////////////////
                 //Añadimos las respuestas
+
+                //creamos el elemento lista
+                org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDeRespuestas = documentoOdtCabecera.getContentRoot().newTextListElement();
+                elementoListaDePreguntas.getLastChild().appendChild(elementoListaDeRespuestas);
+                elementoListaDeRespuestas.setTextContinueNumberingAttribute(true);
+                //aplicamos el estilo a la lista
+                elementoListaDeRespuestas.setTextStyleNameAttribute("EstiloDeListaDePreguntas");
+
                 for (int i = 0; i < p.getRespuestasDePregunta().size(); i++) {
 //                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
 
@@ -567,20 +632,16 @@ public class LectorEscritorDeOdt {
 
                         //creamos el nodo span
                         TextSpanElement ts = parrafo.newTextSpanElement();
-                        // si es el primer span añadimos el numero de pregunta
-                        if (i2 == 0) {
-                            ts.setTextContent(letrasParaLasRespuestas[i] + ".  " + p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
-                        } else {
-                            ts.setTextContent(p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
-                        }
+
+                        //añadimos el texto de la respuesta
+                        ts.setTextContent(p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
 
                         //le aplicamos el estilo
                         ts.setStyleName(nuevoNombreDeEstilo);
                     }
                     //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getRespuestasDePregunta().get(i).getTextosSpan().size() == 0) {
-                        // añadimos el numero de pregunta
-                        parrafo.setTextContent(letrasParaLasRespuestas[i] + ".  " + p.getRespuestasDePregunta().get(i).getTextoTotal());
+                        parrafo.setTextContent(p.getRespuestasDePregunta().get(i).getTextoTotal());
                     }
 
                     //creamos el estilo del parrafo
@@ -591,6 +652,16 @@ public class LectorEscritorDeOdt {
                     }
                     OdfStyle estiloDeParrafo = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
                     estiloDeParrafo.setProperties(documentoOdtBanco.getStyleByName(OdfStyleFamily.Paragraph, p.getRespuestasDePregunta().get(i).getNombreDeEstiloParrafo()).getStylePropertiesDeep());
+
+                    //alinear a la izquierda
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.TextAlign, "start");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.MarginLeft, "16.29664mm");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.LineHeight, "107%");
+                    estiloDeParrafo.setProperty(OdfParagraphProperties.TextIndent, "-6.29666mm");
+
+                    //creamos elemento dentro del elemento lista
+                    org.odftoolkit.odfdom.dom.element.text.TextListItemElement nuevoElementoEnLaListaDeRespuestas = elementoListaDeRespuestas.newTextListItemElement();
+                    nuevoElementoEnLaListaDeRespuestas.appendChild(parrafo);
 
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
@@ -609,7 +680,7 @@ public class LectorEscritorDeOdt {
                 if (propDeEstilo != null) {
                     if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
                         if (!this.tamanioDeLetraAdaptadoSiNo) {
-                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                            logger.debug("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
                         }
                         propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
                         propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
@@ -629,7 +700,7 @@ public class LectorEscritorDeOdt {
                 if (propDeEstilo != null) {
                     if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioMinimoDeLetra) {
                         if (!this.tamanioDeLetraAdaptadoSiNo) {
-                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
+                            logger.debug("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al mínimo, " + this.tamanioMinimoDeLetra + ".");
                         }
                         propDeEstilo.setNodeValue(this.tamanioMinimoDeLetra + "pt");
                         propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
@@ -660,7 +731,7 @@ public class LectorEscritorDeOdt {
                     Node propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                     if (propDeEstilo != null) {
                         if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
-                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
+                            logger.debug("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
                             propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
                             propDeEstilo = documentoOdtCabecera.getStylesDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                             if (propDeEstilo != null) {
@@ -678,7 +749,7 @@ public class LectorEscritorDeOdt {
                     Node propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
                     if (propDeEstilo != null) {
                         if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < this.tamanioDeLetraAdaptado) {
-                            logger.warn("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
+                            logger.debug("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al adaptado, " + this.tamanioDeLetraAdaptado + ".");
                             propDeEstilo.setNodeValue(this.tamanioDeLetraAdaptado + "pt");
                             propDeEstilo = documentoOdtCabecera.getContentDom().getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                             if (propDeEstilo != null) {
