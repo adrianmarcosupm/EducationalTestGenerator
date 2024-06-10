@@ -299,18 +299,18 @@ public class Generador {
 
         // Para debug
         for (int i = 0; i < examenes.size(); i++) {
-            logger.debug(lineaDeGuiones);
-            logger.debug("Exámen: " + i);
-            logger.debug("Version: " + examenes.get(i).getVersion());
-            logger.debug("Preguntas:");
+            logger.trace(lineaDeGuiones);
+            logger.trace("Exámen: " + i);
+            logger.trace("Version: " + examenes.get(i).getVersion());
+            logger.trace("Preguntas:");
             for (int j = 0; j < examenes.get(i).getGrupoDePreguntas().size(); j++) {
-                logger.debug("Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal());
+                logger.trace("Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal());
                 for (int k = 0; k < examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().size(); k++) {
-                    logger.debug("Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal());
+                    logger.trace("Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal());
                 }
             }
         }
-        logger.debug(lineaDeGuiones);
+        logger.trace(lineaDeGuiones);
         /////////////
 
         // TODO: guardamos el examen con la version y las preguntas
