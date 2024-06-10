@@ -15,7 +15,7 @@ Número de preguntas                   =  15
 *****************************************************************
 *		     Adaptaciones especiales			*
 *****************************************************************
-Dificultad adaptada        	= si
+Dificultad adaptada        	= no
 Dificultad adaptada mínima 	= 60
 Dificultad adaptada máxima 	= 70
 Tamaño de letra adaptado si/no 	= si
