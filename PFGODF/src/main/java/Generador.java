@@ -205,8 +205,7 @@ public class Generador {
         //Obtenemos sólo las preguntas del banco de preguntas que cumplen las condiciones
         preguntasPorTemas = lectorEscritorDeOdt.obtenerPreguntas(this.temas);
 
-        if (preguntasPorTemas == null)
-        {
+        if (preguntasPorTemas == null) {
             return; // Los errores son mostrados antes de llegar aqui
         }
 
@@ -245,8 +244,7 @@ public class Generador {
             // Las eliminamos para no coger repetidas
             temasCandidatos.remove(TcandidatoIndex);
             preguntasPorTemas.get(Tcandidato).remove(Pcandidata);
-            if (preguntasPorTemas.get(Tcandidato).size() == 0)
-            {
+            if (preguntasPorTemas.get(Tcandidato).size() == 0) {
                 preguntasPorTemas.remove(Tcandidato);
             }
         }
@@ -268,9 +266,17 @@ public class Generador {
             }
         }
 
-        int numVersionesDiferentes = Math.min(preguntasParaMezclar.size(), numeroMinRespuestas);
+        int numVersionesDiferentes;
+        //si es tipo test
+        if (numeroMinRespuestas == 2) {
+            numVersionesDiferentes = preguntasParaMezclar.size();
+            logger.info("Como es un exámen con preguntas tipo test, no se tendrá en cuenta si se repiten las respuestas.");
+        } else {
+            numVersionesDiferentes = numeroMinRespuestas;
+        }
         logger.info("Las preguntas seleccionadas permiten un máximo de " + numVersionesDiferentes + " versiones diferentes.");
         logger.info("Has seleccionado un máximo de " + numMaxDeVersiones + " versiones diferentes.");
+
         if (numMaxDeVersiones < numVersionesDiferentes) {
             numVersionesDiferentes = numMaxDeVersiones;
         }
@@ -337,12 +343,14 @@ public class Generador {
         //////////////////////
         // Mezclar respuestas
         for (int indexP = 0; indexP < examenesParaMezclar.get(0).getGrupoDePreguntas().size(); indexP++) {
-            // Rellenamos el array con las posibles versiones de orden de respuestas
-            for (int i = 0; i < examenesParaMezclar.get(0).getGrupoDePreguntas().get(0).getRespuestasDePregunta().size(); i++) {
-                numVersionesArr.add(i);
-            }
             // Mezclamos esta pregunta en todos los examenes, cada uno con un orden diferente
             for (Examen e : examenesParaMezclar) {
+                if (numVersionesArr.size() == 0) {
+                    // Rellenamos el array con las posibles versiones de orden de respuestas
+                    for (int i = 0; i < examenesParaMezclar.get(0).getGrupoDePreguntas().get(indexP).getRespuestasDePregunta().size(); i++) {
+                        numVersionesArr.add(i);
+                    }
+                }
                 numDeVarianteIndex = random.nextInt(0, numVersionesArr.size());
                 numDeVariante = numVersionesArr.get(numDeVarianteIndex);
                 numVersionesArr.remove(numDeVarianteIndex);
