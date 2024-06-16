@@ -6,15 +6,18 @@ import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
 import org.odftoolkit.odfdom.dom.style.props.OdfParagraphProperties;
 import org.odftoolkit.odfdom.dom.style.props.OdfTextProperties;
 import org.odftoolkit.odfdom.incubator.doc.draw.OdfDrawFrame;
+import org.odftoolkit.odfdom.incubator.doc.draw.OdfDrawImage;
 import org.odftoolkit.odfdom.incubator.doc.style.OdfStyle;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextParagraph;
 import org.odftoolkit.odfdom.incubator.doc.text.OdfTextSpan;
 import org.odftoolkit.odfdom.incubator.search.TextNavigation;
 import org.odftoolkit.odfdom.incubator.search.TextSelection;
+import org.odftoolkit.odfdom.pkg.OdfPackage;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,9 +39,6 @@ public class LectorEscritorDeOdt {
     Path pathDirectorioDeSalida;
 
     private static final Logger logger = LogManager.getLogger();
-    private static final String lineaDeGuiones = "------------------------------------------------------";
-    private static final char[] letrasParaLasRespuestas = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-            'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 
     /* Adaptaciones especiales */
     private boolean dificultadAdaptada;
@@ -88,6 +88,52 @@ public class LectorEscritorDeOdt {
         this.tamanioMinimoDeLetra = tamanioMinimoDeLetra;
     }
 
+    // Devuelve true si un nodo tiene un nodo imagen buscado recursivamente
+    private boolean tieneImagenes(Node nodo, int nivel) {
+        //para evitar bucles
+        if (nivel > 49) {
+            return false;
+        }
+        nivel++;
+
+        //las imagenes tienen que estar dentro de un frame.
+        //un frame puede estar en un parrafo, o dentro de un span de un parrafo.
+        NodeList nodosHijos = nodo.getChildNodes();
+        for (int indexNodoHijo = 0; indexNodoHijo < nodosHijos.getLength(); indexNodoHijo++) {
+            if (nodosHijos.item(indexNodoHijo) instanceof OdfDrawFrame) {
+                return tieneImagenes(nodosHijos.item(indexNodoHijo), nivel);
+            } else if (nodosHijos.item(indexNodoHijo) instanceof OdfTextSpan) {
+                NodeList nodosHijosDeSpan = nodosHijos.item(indexNodoHijo).getChildNodes();
+                for (int indexNodoHijoDeSpan = 0; indexNodoHijoDeSpan < nodosHijosDeSpan.getLength(); indexNodoHijoDeSpan++) {
+                    if (nodosHijosDeSpan.item(indexNodoHijoDeSpan) instanceof OdfDrawFrame) {
+                        return tieneImagenes(nodosHijosDeSpan.item(indexNodoHijoDeSpan), nivel);
+                    }
+                }
+            } else if (nodosHijos.item(indexNodoHijo) instanceof OdfDrawImage) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Pone los atributos de imagen del parrafo segun los atributos imagen y frame del nodo
+    private void buscarEInsertarFrameConImagen(Node nodoDelFrame, Parrafo parrafo) {
+        //si este frame tiene imagenes
+        if (tieneImagenes(nodoDelFrame, 0)) {
+            parrafo.setImagenAncho(nodoDelFrame.getAttributes().getNamedItem("svg:width").getTextContent());
+            parrafo.setImagenAlto(nodoDelFrame.getAttributes().getNamedItem("svg:height").getTextContent());
+
+            //añadimos las imagenes
+            NodeList nodosHijosDelFrame = nodoDelFrame.getChildNodes();
+            for (int indexNodoHijoDelFrame = 0; indexNodoHijoDelFrame < nodosHijosDelFrame.getLength(); indexNodoHijoDelFrame++) {
+                if (nodosHijosDelFrame.item(indexNodoHijoDelFrame) instanceof OdfDrawImage) {
+                    parrafo.setImagenRuta(nodosHijosDelFrame.item(indexNodoHijoDelFrame).getAttributes().getNamedItem("xlink:href").getTextContent());
+                }
+            }
+        }
+    }
+
+    // Obtiene un HashMap de (temas, arraylist de preguntas). Cada tema contiene un arraylist con todas las preguntas de ese tema.
     public HashMap<Integer, ArrayList<Pregunta>> obtenerPreguntas(ArrayList<Integer> temas) {
         // Borramos las barras de las etiquetas
         String tagPNoRegex = tagPregunta.replace("\\", "");
@@ -99,7 +145,6 @@ public class LectorEscritorDeOdt {
             preguntasReturn.put(t, new ArrayList<>());
         }
         Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
-        Parrafo parrafoTemp = null; // Guardamos la respuesta que encontramos para añadirla a la lista de respuestas
 
         boolean sigueBuscando = true; // Para salir de los bucles
         boolean textoEncontrado = false; // Para elegir caminos diferentes en los bucles
@@ -113,12 +158,6 @@ public class LectorEscritorDeOdt {
         try {
             documentoOdtBanco = OdfTextDocument.loadDocument(fileBanco);
             NodeList nodeTextPList = documentoOdtBanco.getContentRoot().getElementsByTagName("text:p"); // Buscamos nodos XML con esta etiqueta
-            for (OdfStyle s : documentoOdtBanco.getStylesDom().getAutomaticStyles().getAllStyles()) {
-//                System.out.println(s.toString()); TODO: obtiene estilos
-            }
-            for (OdfStyle s : documentoOdtBanco.getStylesDom().getOfficeStyles().getAllStyles()) {
-//                System.out.println(s.toString()); TODO: obtiene estilos
-            }
             //////////////////////////////////////////////////////////////////////////////////////////////////////////
             // Recorremos todos los nodos del documento hasta que no queden más o hasta que encontremos las preguntas
             // que hay en numerosDePregunta
@@ -137,7 +176,7 @@ public class LectorEscritorDeOdt {
                         } else if (lineaLeida.equals(tagRNoRegex)) {
                             logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
                         } else if (lineaLeida.equals(tagMNoRegex)) {
-                            logger.warn("El documento comienza con metadatos que no están asignadas a ninguna pregunta.");
+                            logger.warn("El documento comienza con metadatos que no están asignados a ninguna pregunta.");
                         }
                     }
                 }
@@ -153,13 +192,10 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        //todo buscamos recursivamente imagenes, pueden estar en un p o en un span dentro de un p
-//                        List<OdfDrawImage> l = OdfDrawImage.getImages(documentoOdtBanco);
-//                        for (OdfDrawImage d : documentoOdtBanco)
-//                            logger.info(d.toString());
+
                         // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
-                        if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
+                        if ((!lineaLeida.equals("")) || tieneImagenes(nodo, 0)) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (textoEncontrado) {
                                     logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
@@ -188,29 +224,27 @@ public class LectorEscritorDeOdt {
                                     preguntaTemp = new Pregunta();
                                 }
                                 // Añadimos un nuevo parrafo
-                                preguntaTemp.getParrafos().add(new Parrafo());
-                                // Guardamos todos los text span del parrafo para guardar sus estilos
+                                Parrafo parrafoTemp = new Parrafo();
+                                preguntaTemp.getParrafos().add(parrafoTemp);
+                                // Buscamos si tiene span o frames
                                 NodeList nodosHijos = nodo.getChildNodes();
                                 for (int i = 0; i < nodosHijos.getLength(); i++) {
-//                                    System.out.println(nodosHijos.item(i).getLocalName()); //span todo quitar
-//                                    System.out.println(nodosHijos.item(i).getNodeName()); //text:span
-//                                    System.out.println(nodosHijos.item(i).getTextContent()); todo end quitar
                                     if (nodosHijos.item(i) instanceof OdfDrawFrame) {
-//todo
-                                        logger.info(nodosHijos.item(i).toString());
+                                        buscarEInsertarFrameConImagen(nodosHijos.item(i), parrafoTemp);
+                                    } else if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                        //Buscamos si tiene imagenes el span
+                                        NodeList nodosHijosDeSpan = nodosHijos.item(i).getChildNodes();
+                                        for (int indexNodoHijoDeSpan = 0; indexNodoHijoDeSpan < nodosHijosDeSpan.getLength(); indexNodoHijoDeSpan++) {
+                                            if (nodosHijosDeSpan.item(indexNodoHijoDeSpan) instanceof OdfDrawFrame) {
+                                                buscarEInsertarFrameConImagen(nodosHijosDeSpan.item(indexNodoHijoDeSpan), parrafoTemp);
+                                            }
+                                        }
 
-                                    }
-                                    if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                        // Guardamos todos los text span del parrafo para guardar sus estilos
                                         OdfTextSpan ts = (OdfTextSpan) nodosHijos.item(i);
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getTextosSpan().add(ts.getTextContent());
                                         preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
-                                        //Guardamos el estilo del parrafo TODO quitar
-                                        logger.trace("getStyleName" + ts.getStyleName());
-                                        logger.trace("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
-                                        logger.trace("getAutomaticStyle" + ts.getAutomaticStyle());
-                                        logger.trace("getDocumentStyle" + ts.getDocumentStyle());
-                                        //////////////todo end quitar
                                     }
                                 }
                                 //si no tiene nodos textspan añadimos el texto del parrafo
@@ -218,12 +252,6 @@ public class LectorEscritorDeOdt {
                                     preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
 
-                                // TODO quitar
-                                logger.trace("getStyleName" + parrafo.getStyleName());
-                                logger.trace("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                logger.trace("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                logger.trace("getDocumentStyle" + parrafo.getDocumentStyle());
-                                //////////////todo end quitar
                                 //Guardamos el estilo del parrafo
                                 preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
 
@@ -247,7 +275,7 @@ public class LectorEscritorDeOdt {
                         parrafo = (OdfTextParagraph) nodo;
                         // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
-                        if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
+                        if ((!lineaLeida.equals("")) || tieneImagenes(nodo, 0)) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (!textoEncontrado) {
                                     logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
@@ -270,37 +298,34 @@ public class LectorEscritorDeOdt {
                                 }
                                 sigueBuscando = false;
                             } else {
-                                // Añadimos una nueva respuesta
-                                preguntaTemp.getRespuestasDePregunta().add(new Parrafo());
-                                // Guardamos todos los text span del parrafo para guardar sus estilos
+                                // Añadimos un nuevo parrafo
+                                Parrafo parrafoTemp = new Parrafo();
+                                preguntaTemp.getRespuestasDePregunta().add(parrafoTemp);
+                                // Buscamos si tiene span o frames
                                 NodeList nodosHijos = nodo.getChildNodes();
                                 for (int i = 0; i < nodosHijos.getLength(); i++) {
-//                                    System.out.println(nodosHijos.item(i).getLocalName()); //span todo quitar
-//                                    System.out.println(nodosHijos.item(i).getNodeName()); //text:span
-//                                    System.out.println(nodosHijos.item(i).getTextContent()); todo end quitar
-                                    if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                    if (nodosHijos.item(i) instanceof OdfDrawFrame) {
+                                        buscarEInsertarFrameConImagen(nodosHijos.item(i), parrafoTemp);
+                                    } else if (nodosHijos.item(i) instanceof OdfTextSpan) {
+                                        //Buscamos si tiene imagenes el span
+                                        NodeList nodosHijosDeSpan = nodosHijos.item(i).getChildNodes();
+                                        for (int indexNodoHijoDeSpan = 0; indexNodoHijoDeSpan < nodosHijosDeSpan.getLength(); indexNodoHijoDeSpan++) {
+                                            if (nodosHijosDeSpan.item(indexNodoHijoDeSpan) instanceof OdfDrawFrame) {
+                                                buscarEInsertarFrameConImagen(nodosHijosDeSpan.item(indexNodoHijoDeSpan), parrafoTemp);
+                                            }
+                                        }
+
+                                        // Guardamos todos los text span del parrafo para guardar sus estilos
                                         OdfTextSpan ts = (OdfTextSpan) nodosHijos.item(i);
                                         preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getTextosSpan().add(ts.getTextContent());
                                         preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getNombresDeEstilosTextosSpan().
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
-                                        //Guardamos el estilo del parrafo TODO quitar
-                                        logger.trace("getStyleName" + ts.getStyleName());
-                                        logger.trace("getTextStyleNameAttribute" + ts.getTextStyleNameAttribute());
-                                        logger.trace("getAutomaticStyle" + ts.getAutomaticStyle());
-                                        logger.trace("getDocumentStyle" + ts.getDocumentStyle());
-                                        //////////////todo end quitar
                                     }
                                 }
                                 //si no tiene nodos textspan añadimos el texto del parrafo
                                 if (preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getTextosSpan().size() == 0) {
                                     preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
-                                //Guardamos el estilo del parrafo TODO quitar
-                                logger.trace("getStyleName" + parrafo.getStyleName());
-                                logger.trace("getTextStyleNameAttribute" + parrafo.getTextStyleNameAttribute());
-                                logger.trace("getAutomaticStyle" + parrafo.getAutomaticStyle());
-                                logger.trace("getDocumentStyle" + parrafo.getDocumentStyle());
-                                //////////////todo end quitar
                                 preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setNombreDeEstiloParrafo(parrafo.getStyleName());
 
                                 textoEncontrado = true;
@@ -398,8 +423,14 @@ public class LectorEscritorDeOdt {
                     // para debug
                     int contadorDeRespuestas = 1;
                     logger.debug("Pregunta añadida: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                    if (!preguntaTemp.getParrafos().get(0).getImagenRuta().equals("")) {
+                        logger.debug("(imagen)");
+                    }
                     for (Parrafo r : preguntaTemp.getRespuestasDePregunta()) {
                         logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTextoTotal());
+                        if (!r.getImagenRuta().equals("")) {
+                            logger.debug("(imagen)");
+                        }
                         contadorDeRespuestas++;
                     }
                     //end para debug
@@ -415,7 +446,8 @@ public class LectorEscritorDeOdt {
                 }
 
             }
-        } catch (Exception ex) {
+        } catch (
+                Exception ex) {
             logger.error("Error obteniendo preguntas: " + ex.getMessage());
             preguntasReturn = null;
         }
@@ -446,6 +478,7 @@ public class LectorEscritorDeOdt {
         return numPreguntas;
     }
 
+    // Obtiene un nombre de estilo con el nombre pasado como parametro y un numero. El nombre obtenido no se repite en la cabecera
     private String obtenerNuevoNombreDeEstilo(String antiguoNombre, OdfStyleFamily sf) {
         try {
             if (documentoOdtCabecera.getStyleByName(sf, antiguoNombre) == null) {
@@ -456,14 +489,32 @@ public class LectorEscritorDeOdt {
                     return (antiguoNombre + i);
                 }
             }
-            logger.error("No se ha podido crear el nuevo estilo, hay demasiados estilos con el mismo nombre.");
+            logger.error("No se ha podido crear el nuevo estilo, hay demasiados estilos con el mismo nombre. Nombre del estilo: " + antiguoNombre);
         } catch (Exception e) {
-            logger.error("Error creando los estilos. " + e.getMessage());
+            logger.error("Error leyendo los estilos. " + e.getMessage());
         }
         return "";
     }
 
+    // Obtiene un nombre de imagen con el nombre pasado como parametro y un numero. El nombre obtenido no se repite en el paquete
+    private String obtenerNuevoNombreDeImagen(OdfPackage pa, String antiguoNombre) {
+        try {
+            if (!pa.contains(antiguoNombre)) {
+                return antiguoNombre;
+            }
+            for (int i = 2; i < 10000; i++) {
+                if (!pa.contains(antiguoNombre + i)) {
+                    return (antiguoNombre + i);
+                }
+            }
+            logger.error("No se ha podido insertar la nueva imagen, hay demasiadas imagenes con el mismo nombre. Nombre de la imagen: " + antiguoNombre);
+        } catch (Exception e) {
+            logger.error("Error leyendo las imagenes. " + e.getMessage());
+        }
+        return "";
+    }
 
+    // Guarda el archivo del examen
     public boolean guardarExamen(Examen e) {
 
         try {
@@ -474,12 +525,7 @@ public class LectorEscritorDeOdt {
             return false;
         }
 
-//        File documentoExamen;
-//        OdfContentDom dom;
         try {
-            //Cargamos la plantilla que tiene la cabecera
-//            documentoOdt = (OdfTextDocument) OdfTextDocument.loadDocument(fileBanco);
-//            dom = documentoOdt.getContentDom();
             /////////////////////////////////////
             // Reemplazamos el tag de la version
             TextNavigation search = new TextNavigation(tagVersion, documentoOdtCabecera);
@@ -488,24 +534,45 @@ public class LectorEscritorDeOdt {
                 selection.replaceWith(e.getVersion());
             }
 
+            //////////////////////////////////////////////
+            //Creamos el estilo de las imagenes centradas
+            String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo("estiloDeImagenesCentradas", OdfStyleFamily.Paragraph);
+            if (nuevoNombreDeEstilo.equals("")) {
+                return false;
+            }
+            OdfStyle estiloImagenesCentradas = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
+            estiloImagenesCentradas.setProperty(OdfParagraphProperties.TextAlign, "center");
+            /////////////////////////////////////////////////////////////
+            //Creamos el estilo de las imagenes alineadas a la izquierda
+            nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo("estiloDeImagenesIzquierda", OdfStyleFamily.Paragraph);
+            if (nuevoNombreDeEstilo.equals("")) {
+                return false;
+            }
+            OdfStyle estiloImagenesIzquierda = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Paragraph);
+            estiloImagenesIzquierda.setProperty(OdfParagraphProperties.TextAlign, "start");
+            estiloImagenesIzquierda.setProperty(OdfParagraphProperties.MarginLeft, "16.29664mm");
+            estiloImagenesIzquierda.setProperty(OdfParagraphProperties.LineHeight, "107%");
+            estiloImagenesIzquierda.setProperty(OdfParagraphProperties.TextIndent, "-6.29666mm");
+
             ////////////////////////////////////
             //Creamos los estilos de las listas
             //////////////////////
             //creamos el estilo
-            org.odftoolkit.odfdom.incubator.doc.text.OdfTextListStyle estiloDeListaDePreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newListStyle("EstiloDeListaDePreguntas");
+            nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo("EstiloDeListaDePreguntas", OdfStyleFamily.List);
+            if (nuevoNombreDeEstilo.equals("")) {
+                return false;
+            }
+            org.odftoolkit.odfdom.incubator.doc.text.OdfTextListStyle estiloDeListaDePreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newListStyle(nuevoNombreDeEstilo);
             //creamos la numeracion para las preguntas
             org.odftoolkit.odfdom.dom.element.text.TextListLevelStyleNumberElement numeracionListaPreguntas = estiloDeListaDePreguntas.newTextListLevelStyleNumberElement("1", 1);
             numeracionListaPreguntas.setStyleNumSuffixAttribute(".");
 
             org.odftoolkit.odfdom.dom.element.style.StyleListLevelPropertiesElement numeracionListaPreguntasProperties = numeracionListaPreguntas.newStyleListLevelPropertiesElement();
-//            numeracionListaPreguntasProperties.setTextSpaceBeforeAttribute("20.0025mm");
             numeracionListaPreguntasProperties.setTextMinLabelWidthAttribute("6.35mm");
             numeracionListaPreguntasProperties.setTextListLevelPositionAndSpaceModeAttribute("label-alignment");
 
             org.odftoolkit.odfdom.dom.element.style.StyleListLevelLabelAlignmentElement numeracionListaPreguntasAlignment = numeracionListaPreguntasProperties.newStyleListLevelLabelAlignmentElement("listtab");
             numeracionListaPreguntasAlignment.setTextLabelFollowedByAttribute("listtab");
-//            numeracionListaPreguntasAlignment.setFoMarginLeftAttribute("26.3525mm");
-//            numeracionListaPreguntasAlignment.setFoTextIndentAttribute("-6.35mm");
 
             //creamos la numeracion para las Respuestas
             org.odftoolkit.odfdom.dom.element.text.TextListLevelStyleNumberElement numeracionListaRespuestas = estiloDeListaDePreguntas.newTextListLevelStyleNumberElement("a", 2);
@@ -513,16 +580,18 @@ public class LectorEscritorDeOdt {
             numeracionListaRespuestas.setStyleNumLetterSyncAttribute(true);
 
             org.odftoolkit.odfdom.dom.element.style.StyleListLevelPropertiesElement numeracionListaRespuestasProperties = numeracionListaRespuestas.newStyleListLevelPropertiesElement();
-//            numeracionListaRespuestasProperties.setTextSpaceBeforeAttribute("19.05mm");
             numeracionListaRespuestasProperties.setTextMinLabelWidthAttribute("6.35mm");
             numeracionListaRespuestasProperties.setTextListLevelPositionAndSpaceModeAttribute("label-alignment");
 
             org.odftoolkit.odfdom.dom.element.style.StyleListLevelLabelAlignmentElement numeracionListaRespuestasAlignment = numeracionListaRespuestasProperties.newStyleListLevelLabelAlignmentElement("listtab");
             numeracionListaRespuestasAlignment.setTextLabelFollowedByAttribute("listtab");
-//            numeracionListaRespuestasAlignment.setFoMarginLeftAttribute("25.4mm");
-//            numeracionListaRespuestasAlignment.setFoTextIndentAttribute("-6.35mm");
+
             //del texto de la numeracion
-            OdfStyle estiloNumeracionListaPreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle("estiloDelTextoListaPreguntas", OdfStyleFamily.Text);
+            nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo("estiloDelTextoListaPreguntas", OdfStyleFamily.Text);
+            if (nuevoNombreDeEstilo.equals("")) {
+                return false;
+            }
+            OdfStyle estiloNumeracionListaPreguntas = documentoOdtCabecera.getOrCreateDocumentStyles().newStyle(nuevoNombreDeEstilo, OdfStyleFamily.Text);
             estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeight, "bold");
             estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeightAsian, "bold");
             estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontWeightComplex, "bold");
@@ -530,22 +599,21 @@ public class LectorEscritorDeOdt {
             estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontSizeAsian, "12pt");
             estiloNumeracionListaPreguntas.setProperty(OdfTextProperties.FontSizeComplex, "12pt");
             //le aplicamos el estilo a la numeracion
-            numeracionListaPreguntas.setTextStyleNameAttribute("estiloDelTextoListaPreguntas");
-            numeracionListaRespuestas.setTextStyleNameAttribute("estiloDelTextoListaPreguntas");
+            numeracionListaPreguntas.setTextStyleNameAttribute(estiloNumeracionListaPreguntas.getStyleNameAttribute());
+            numeracionListaRespuestas.setTextStyleNameAttribute(estiloNumeracionListaPreguntas.getStyleNameAttribute());
 
             //////////////////////////
             // Añadimos las preguntas
-
-            //creamos el elemento lista
+            // creamos el elemento lista
             org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDePreguntas = documentoOdtCabecera.getContentRoot().newTextListElement();
             elementoListaDePreguntas.setTextContinueNumberingAttribute(true);
             //aplicamos el estilo a la lista
-            elementoListaDePreguntas.setTextStyleNameAttribute("EstiloDeListaDePreguntas");
+            elementoListaDePreguntas.setTextStyleNameAttribute(estiloDeListaDePreguntas.getStyleNameAttribute());
 
             for (Pregunta p : e.getGrupoDePreguntas()) {
+                //creamos elemento dentro del elemento lista
+                org.odftoolkit.odfdom.dom.element.text.TextListItemElement nuevoElementoEnLaListaDePreguntas = elementoListaDePreguntas.newTextListItemElement();
                 for (int i = 0; i < p.getParrafos().size(); i++) {
-//                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
-
                     //creamos el parrafo
                     OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
 
@@ -553,7 +621,7 @@ public class LectorEscritorDeOdt {
                     for (int i2 = 0; i2 < p.getParrafos().get(i).getTextosSpan().size(); i2++) {
                         //creamos el estilo del span
                         // cambiamos los nombres de los estilos para que no se sobreescriban
-                        String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
+                        nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
                         if (nuevoNombreDeEstilo.equals("")) {
                             return false;
                         }
@@ -570,14 +638,16 @@ public class LectorEscritorDeOdt {
                         //le ponemos el estilo al span
                         ts.setStyleName(nuevoNombreDeEstilo);
                     }
+
                     //si no tiene nodos span ponemos el texto del parrafo
                     if (p.getParrafos().get(i).getTextosSpan().size() == 0) {
                         parrafo.setTextContent(p.getParrafos().get(i).getTextoTotal());
                     }
 
+                    ////////////////////////////////
                     //creamos el estilo del parrafo
                     // cambiamos los nombres de los estilos para que no se sobreescriban
-                    String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
+                    nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getParrafos().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
                     if (nuevoNombreDeEstilo.equals("")) {
                         return false;
                     }
@@ -591,22 +661,47 @@ public class LectorEscritorDeOdt {
                     estiloDeParrafo.setProperty(OdfParagraphProperties.LineHeight, "107%");
                     estiloDeParrafo.setProperty(OdfParagraphProperties.TextIndent, "-6.29666mm");
 
-                    //creamos elemento dentro del elemento lista
-                    org.odftoolkit.odfdom.dom.element.text.TextListItemElement nuevoElementoEnLaListaDePreguntas = elementoListaDePreguntas.newTextListItemElement();
+                    //lo añadimos al elemento en la lista de preguntas
                     nuevoElementoEnLaListaDePreguntas.appendChild(parrafo);
+
+                    //////////////////////////////////
+                    //si tiene una imagen la añadimos
+                    if (!p.getParrafos().get(i).getImagenRuta().equals("")) {
+                        //creamos el parrafo
+                        OdfTextParagraph parrafoDeImagen = documentoOdtCabecera.newParagraph();
+
+                        InputStream datosStream = documentoOdtBanco.getPackage().getInputStream(p.getParrafos().get(i).getImagenRuta());
+                        OdfPackage pa = documentoOdtCabecera.getPackage();
+                        String nuevoNombreParaLaImagen = obtenerNuevoNombreDeImagen(pa, p.getParrafos().get(i).getImagenRuta());
+                        pa.insert(datosStream, nuevoNombreParaLaImagen, "");
+
+                        org.odftoolkit.odfdom.dom.element.draw.DrawFrameElement frameDelParrafo = parrafoDeImagen.newDrawFrameElement();
+                        frameDelParrafo.setSvgWidthAttribute(p.getParrafos().get(i).getImagenAncho());
+                        frameDelParrafo.setSvgHeightAttribute(p.getParrafos().get(i).getImagenAlto());
+                        frameDelParrafo.setSvgXAttribute("0mm");
+                        frameDelParrafo.setSvgYAttribute("0mm");
+                        frameDelParrafo.setStyleRelWidthAttribute("scale");
+                        frameDelParrafo.setStyleRelHeightAttribute("scale");
+                        frameDelParrafo.setTextAnchorTypeAttribute("as-char");
+                        org.odftoolkit.odfdom.dom.element.draw.DrawImageElement imagenDelFrame = frameDelParrafo.newDrawImageElement();
+                        imagenDelFrame.setXlinkHrefAttribute(nuevoNombreParaLaImagen);
+                        imagenDelFrame.setXlinkTypeAttribute("simple");
+                        imagenDelFrame.setXlinkShowAttribute("embed");
+                        imagenDelFrame.setXlinkActuateAttribute("onLoad");
+
+                        //lo añadimos al elemento en la lista de preguntas
+                        nuevoElementoEnLaListaDePreguntas.appendChild(parrafoDeImagen);
+
+                        //le aplicamos el estilo al parrafo
+                        parrafoDeImagen.setStyleName(estiloImagenesCentradas.getStyleNameAttribute());
+                    }
 
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
-
-
-//                    dom.getRootElement().appendChild(par);
-//                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
-//                    documentoOdtBanco.newParagraph().addContent(t); funciona
                 }
 
                 //////////////////////////
                 //Añadimos las respuestas
-
                 //creamos el elemento lista
                 org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDeRespuestas = documentoOdtCabecera.getContentRoot().newTextListElement();
                 elementoListaDePreguntas.getLastChild().appendChild(elementoListaDeRespuestas);
@@ -615,15 +710,13 @@ public class LectorEscritorDeOdt {
                 elementoListaDeRespuestas.setTextStyleNameAttribute("EstiloDeListaDePreguntas");
 
                 for (int i = 0; i < p.getRespuestasDePregunta().size(); i++) {
-//                    OdfTextParagraph par = new OdfTextParagraph(dom, p.getNombreDeEstilos().get(i),p.getTextos().get(i));
-
                     //creamos el parrafo
                     OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
 
                     for (int i2 = 0; i2 < p.getRespuestasDePregunta().get(i).getTextosSpan().size(); i2++) {
                         //creamos el estilo del span
                         // cambiamos los nombres de los estilos para que no se sobreescriban
-                        String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
+                        nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombresDeEstilosTextosSpan().get(i2), OdfStyleFamily.Text);
                         if (nuevoNombreDeEstilo.equals("")) {
                             return false;
                         }
@@ -644,9 +737,10 @@ public class LectorEscritorDeOdt {
                         parrafo.setTextContent(p.getRespuestasDePregunta().get(i).getTextoTotal());
                     }
 
+                    ////////////////////////////////
                     //creamos el estilo del parrafo
                     // cambiamos los nombres de los estilos para que no se sobreescriban
-                    String nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
+                    nuevoNombreDeEstilo = obtenerNuevoNombreDeEstilo(p.getRespuestasDePregunta().get(i).getNombreDeEstiloParrafo(), OdfStyleFamily.Paragraph);
                     if (nuevoNombreDeEstilo.equals("")) {
                         return false;
                     }
@@ -663,13 +757,40 @@ public class LectorEscritorDeOdt {
                     org.odftoolkit.odfdom.dom.element.text.TextListItemElement nuevoElementoEnLaListaDeRespuestas = elementoListaDeRespuestas.newTextListItemElement();
                     nuevoElementoEnLaListaDeRespuestas.appendChild(parrafo);
 
+                    //////////////////////////////////
+                    //si tiene una imagen la añadimos
+                    if (!p.getRespuestasDePregunta().get(i).getImagenRuta().equals("")) {
+                        //creamos el parrafo
+                        OdfTextParagraph parrafoDeImagen = documentoOdtCabecera.newParagraph();
+
+                        InputStream datosStream = documentoOdtBanco.getPackage().getInputStream(p.getRespuestasDePregunta().get(i).getImagenRuta());
+                        OdfPackage pa = documentoOdtCabecera.getPackage();
+                        String nuevoNombreParaLaImagen = obtenerNuevoNombreDeImagen(pa, p.getRespuestasDePregunta().get(i).getImagenRuta());
+                        pa.insert(datosStream, nuevoNombreParaLaImagen, "");
+
+                        org.odftoolkit.odfdom.dom.element.draw.DrawFrameElement frameDelParrafo = parrafoDeImagen.newDrawFrameElement();
+                        frameDelParrafo.setSvgWidthAttribute(p.getRespuestasDePregunta().get(i).getImagenAncho());
+                        frameDelParrafo.setSvgHeightAttribute(p.getRespuestasDePregunta().get(i).getImagenAlto());
+                        frameDelParrafo.setSvgXAttribute("0mm");
+                        frameDelParrafo.setSvgYAttribute("0mm");
+                        frameDelParrafo.setStyleRelWidthAttribute("scale");
+                        frameDelParrafo.setStyleRelHeightAttribute("scale");
+                        frameDelParrafo.setTextAnchorTypeAttribute("as-char");
+                        org.odftoolkit.odfdom.dom.element.draw.DrawImageElement imagenDelFrame = frameDelParrafo.newDrawImageElement();
+                        imagenDelFrame.setXlinkHrefAttribute(nuevoNombreParaLaImagen);
+                        imagenDelFrame.setXlinkTypeAttribute("simple");
+                        imagenDelFrame.setXlinkShowAttribute("embed");
+                        imagenDelFrame.setXlinkActuateAttribute("onLoad");
+
+                        //lo añadimos al elemento en la lista de preguntas
+                        nuevoElementoEnLaListaDeRespuestas.appendChild(parrafoDeImagen);
+
+                        //le aplicamos el estilo al parrafo
+                        parrafoDeImagen.setStyleName(estiloImagenesIzquierda.getStyleNameAttribute());
+                    }
+
                     //le aplicamos el estilo al parrafo
                     parrafo.setStyleName(nuevoNombreDeEstilo);
-
-
-//                    dom.getRootElement().appendChild(par);
-//                    documentoOdtBanco.addText(t); funciona pero todo en el mismo parrafo
-//                    documentoOdtBanco.newParagraph().addContent(t); funciona
                 }
             }
 
@@ -774,21 +895,7 @@ public class LectorEscritorDeOdt {
             logger.error("Error guardando examen: " + ex.getMessage());
         }
 
-        // Para añadir contenido a otro odt:
-//        public static void main (String[]args){
-//            FusionarDocumentos fusionador = new FusionarDocumentos();
-//            File archivoASerFusionado = new File("ruta/al/archivo/a/fusionar.odt");
-//            fusionador.fusionarOdt(archivoASerFusionado);
-//        }
-//
-//        void fusionarOdt (File archivoASerFusionado){
-//            TextDocument maestro = TextDocument.loadDocument(archivoMaestro);
-//            TextDocument esclavo = TextDocument.loadDocument(archivoASerFusionado);
-//            maestro.insertContentFromDocumentAfter(esclavo, maestro.getParagraphByReverseIndex(0, false), true);
-//            maestro.save(archivoMaestro);
-//        }
         return true;
     }
-
 
 }

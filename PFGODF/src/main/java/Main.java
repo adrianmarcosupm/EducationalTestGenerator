@@ -4,6 +4,5 @@ public class Main {
         Generador generador = new Generador();
         generador.generar();
 
-
     }
 }
