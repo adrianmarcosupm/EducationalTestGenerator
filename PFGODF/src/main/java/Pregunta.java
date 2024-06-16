@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Pregunta {
-    private ArrayList<Parrafo> parrafos; // Puede contener varios parrafos
+    private ArrayList<Parrafo> parrafos; // Una pregunta puede contener varios parrafos
     private ArrayList<Parrafo> respuestasDePregunta;
     private HashMap<String, String> metadatos;
 
@@ -42,6 +42,7 @@ public class Pregunta {
         this.metadatos = metadatos;
     }
 
+    // Obtiene una copia del objeto
     public Pregunta obtenerCopiaRecursiva() {
         Pregunta pReturn = new Pregunta();
 

@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Random;
 
 public class Generador {
@@ -68,9 +69,9 @@ public class Generador {
                 fw.write("*****************************************************************\n");
                 fw.write("*\t\t\tAjustes generales\t\t\t*\n");
                 fw.write("*****************************************************************\n");
-                fw.write("Archivo de plantilla \t\t\t= plantilla.odt\n");
-                fw.write("Archivo del banco de preguntas \t\t= bancotemporal.odt\n");
-                fw.write("Directorio para guardar los exámenes \t= aqui\n");
+                fw.write("Archivo de plantilla \t\t\t= Plantilla.odt\n");
+                fw.write("Archivo del banco de preguntas \t\t= Banco_De_Preguntas.odt\n");
+                fw.write("Directorio para guardar los exámenes \t= examenes_generados\n");
                 fw.write("\n");
                 fw.write("*****************************************************************\n");
                 fw.write("*\t\t\tAjustes de exámen\t\t\t*\n");
@@ -82,7 +83,7 @@ public class Generador {
                 fw.write("*****************************************************************\n");
                 fw.write("*\t\t     Adaptaciones especiales\t\t\t*\n");
                 fw.write("*****************************************************************\n");
-                fw.write("Dificultad adaptada        \t= si\n");
+                fw.write("Dificultad adaptada        \t= no\n");
                 fw.write("Dificultad adaptada mínima \t= 60\n");
                 fw.write("Dificultad adaptada máxima \t= 70\n");
                 fw.write("Tamaño de letra adaptado si/no \t= si\n");
@@ -155,10 +156,10 @@ public class Generador {
         } finally {
             // Imprimimos los valores para que los vea el usuario
             imprimirConfiguracion();
-            //
         }
     }
 
+    //Imprime la configuracion cargada al usuario
     private void imprimirConfiguracion() {
         logger.info(lineaDeGuiones);
         logger.info("Configuración cargada con los siguientes valores:");
@@ -179,10 +180,10 @@ public class Generador {
         logger.info(lineaDeGuiones);
     }
 
+    //Genera los examenes, los mezcla y los guarda
     public void generar() {
         Random random = new Random();
         LectorEscritorDeOdt lectorEscritorDeOdt = new LectorEscritorDeOdt(bancoDePreguntas, plantilla, directorioSalida);
-//        LectorEscritorDeOdt parseadorBanco = new LectorEscritorDeOdt(bancoDePreguntas, directorioSalida);
 
         //Ponemos los ajustes de adaptaciones especiales al lector de odt
         lectorEscritorDeOdt.setDificultadAdaptada(this.dificultadAdaptada);
@@ -284,8 +285,6 @@ public class Generador {
         ////////////////////////////////////////////////
         // Comenzamos con la generación de los exámenes
         Examen examenTemp;
-        Pregunta preguntaTemp;
-        Parrafo parrafoTemp;
         // Para cada version
         for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
             examenTemp = new Examen();
@@ -311,15 +310,21 @@ public class Generador {
             logger.trace("Preguntas:");
             for (int j = 0; j < examenes.get(i).getGrupoDePreguntas().size(); j++) {
                 logger.trace("Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal());
+                if (!examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getImagenRuta().equals("")) {
+                    logger.trace("(imagen)");
+                }
                 for (int k = 0; k < examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().size(); k++) {
                     logger.trace("Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal());
+                    if (!examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getImagenRuta().equals("")) {
+                        logger.trace("(imagen)");
+                    }
                 }
             }
         }
         logger.trace(lineaDeGuiones);
         /////////////
 
-        // TODO: guardamos el examen con la version y las preguntas
+        //Guardamos los examenes
         logger.info(lineaDeGuiones);
         logger.info("Guardando exámenes");
         logger.info(lineaDeGuiones);
@@ -330,7 +335,6 @@ public class Generador {
         }
 
     }
-
 
     // Mezcla las respuestas y las preguntas
     private void mezclarExamenes(ArrayList<Examen> examenesParaMezclar) {
@@ -459,7 +463,7 @@ public class Generador {
 
     // Convierte los si en true y el resto en false
     private boolean getBoolean(String palabra) {
-        return (palabra.trim().toLowerCase().equals("si"));
+        return (palabra.trim().toLowerCase(Locale.ROOT).equals("si"));
     }
 
 }

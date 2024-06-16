@@ -5,19 +5,28 @@ public class Parrafo {
     private ArrayList<String> nombresDeEstilosTextosSpan;
     private String textoDeParrafo;
     private String nombreDeEstiloParrafo;
+    private String imagenRuta;
+    private String imagenAncho;
+    private String imagenAlto;
 
     public Parrafo() {
         this.textosSpan = new ArrayList<>();
         this.nombresDeEstilosTextosSpan = new ArrayList<>();
         this.textoDeParrafo = "";
         this.nombreDeEstiloParrafo = "";
+        this.imagenRuta = "";
+        this.imagenAncho = "";
+        this.imagenAlto = "";
     }
 
-    public Parrafo(ArrayList<String> textosSpan, ArrayList<String> nombresDeEstilosTextosSpan, String textoDeParrafo, String nombreDeEstiloParrafo) {
+    public Parrafo(ArrayList<String> textosSpan, ArrayList<String> nombresDeEstilosTextosSpan, String textoDeParrafo, String nombreDeEstiloParrafo, String imagenRuta, String imagenAncho, String imagenAlto) {
         this.textosSpan = textosSpan;
         this.nombresDeEstilosTextosSpan = nombresDeEstilosTextosSpan;
         this.textoDeParrafo = textoDeParrafo;
         this.nombreDeEstiloParrafo = nombreDeEstiloParrafo;
+        this.imagenRuta = imagenRuta;
+        this.imagenAncho = imagenAncho;
+        this.imagenAlto = imagenAlto;
     }
 
     public ArrayList<String> getTextosSpan() {
@@ -52,6 +61,30 @@ public class Parrafo {
         this.textoDeParrafo = textoDeParrafo;
     }
 
+    public String getImagenRuta() {
+        return imagenRuta;
+    }
+
+    public void setImagenRuta(String imagenRuta) {
+        this.imagenRuta = imagenRuta;
+    }
+
+    public String getImagenAncho() {
+        return imagenAncho;
+    }
+
+    public void setImagenAncho(String imagenAncho) {
+        this.imagenAncho = imagenAncho;
+    }
+
+    public String getImagenAlto() {
+        return imagenAlto;
+    }
+
+    public void setImagenAlto(String imagenAlto) {
+        this.imagenAlto = imagenAlto;
+    }
+
     //Obtiene el texto total del parrafo, porque a veces no hay spans o no hay texto de parrafo.
     public String getTextoTotal() {
         if (this.textoDeParrafo != "") {
@@ -65,6 +98,7 @@ public class Parrafo {
         }
     }
 
+    // Obtiene una copia del objeto
     public Parrafo obtenerCopiaRecursiva() {
         Parrafo pReturn = new Parrafo();
 
@@ -79,6 +113,10 @@ public class Parrafo {
         pReturn.setTextoDeParrafo(this.textoDeParrafo);
 
         pReturn.setNombreDeEstiloParrafo(this.nombreDeEstiloParrafo);
+
+        pReturn.setImagenRuta(this.imagenRuta);
+        pReturn.setImagenAncho(this.imagenAncho);
+        pReturn.setImagenAlto(this.imagenAlto);
 
         return pReturn;
     }

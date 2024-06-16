@@ -1,9 +1,9 @@
 *****************************************************************
 *			Ajustes generales			*
 *****************************************************************
-Archivo de plantilla 			= plantilla.odt
-Archivo del banco de preguntas 		= bancotemporal.odt
-Directorio para guardar los exámenes 	= aqui
+Archivo de plantilla 			= Plantilla.odt
+Archivo del banco de preguntas 		= Banco_De_Preguntas.odt
+Directorio para guardar los exámenes 	= examenes_generados
 
 *****************************************************************
 *			Ajustes de exámen			*
