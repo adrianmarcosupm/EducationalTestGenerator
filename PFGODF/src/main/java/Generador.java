@@ -97,9 +97,9 @@ public class Generador {
             }
         }
 
+        String linea = "", ajuste, valor;
         try {
             BufferedReader reader = new BufferedReader(new FileReader("GeneradorConfiguracion.txt"));
-            String linea, ajuste, valor;
             while ((linea = reader.readLine()) != null) {
                 if (linea.contains("=")) {
                     linea = linea.trim();
@@ -136,11 +136,12 @@ public class Generador {
             }
         } catch (Exception e) {
             logger.error("Error al leer el archivo de configuracion: " + e.getMessage());
+            logger.error("Ultima linea leida: " + linea);
             logger.error("Usando valores por defecto");
 
-            plantilla = new File("plantilla.odt");
-            bancoDePreguntas = new File("bancotemporal.odt");
-            directorioSalida = Paths.get("aqui");
+            plantilla = new File("Plantilla.odt");
+            bancoDePreguntas = new File("Banco_De_Preguntas.odt");
+            directorioSalida = Paths.get("examenes_generados");
             numMaxDeVersiones = 4;
             temas = new ArrayList<>();
             for (int i = 1; i < 11; i++) {
