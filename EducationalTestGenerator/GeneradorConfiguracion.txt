@@ -3,21 +3,21 @@
 *****************************************************************
 Archivo de plantilla 			= Plantilla.odt
 Archivo del banco de preguntas 		= Banco_De_Preguntas.odt
-Directorio para guardar los exámenes 	= examenes_generados
+Directorio para guardar los examenes 	= examenes_generados
 
 *****************************************************************
-*			Ajustes de exámen			*
+*			Ajustes de examen			*
 *****************************************************************
-Número máximo de versiones            =  4
+Numero maximo de versiones            =  4
 Temas a incluir (separados por comas) =  1,2,3,4,5,6,7,8,9,10
-Número de preguntas                   =  15
+Numero de preguntas                   =  15
 
 *****************************************************************
 *		     Adaptaciones especiales			*
 *****************************************************************
 Dificultad adaptada        	= no
-Dificultad adaptada mínima 	= 60
-Dificultad adaptada máxima 	= 70
-Tamaño de letra adaptado si/no 	= si
-Tamaño de letra adaptado       	= 11
-Tamaño mínimo de letra         	= 9
+Dificultad adaptada minima 	= 60
+Dificultad adaptada maxima 	= 70
+Tamano de letra adaptado si/no 	= si
+Tamano de letra adaptado       	= 11
+Tamano minimo de letra         	= 9

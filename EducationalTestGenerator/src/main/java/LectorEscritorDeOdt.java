@@ -1,5 +1,4 @@
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
 import org.odftoolkit.odfdom.doc.OdfTextDocument;
 import org.odftoolkit.odfdom.dom.element.text.TextSpanElement;
 import org.odftoolkit.odfdom.dom.style.OdfStyleFamily;
@@ -23,13 +22,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 
+import static org.fusesource.jansi.Ansi.ansi;
+
 
 public class LectorEscritorDeOdt {
-
+    private int nivelDeLog = 3;
     OdfTextDocument documentoOdtBanco;
     OdfTextDocument documentoOdtCabecera;
 
-    // Los tags se envian como regex en algunos métodos, así que hay que utilizar caracteres de escape.
+    // Los tags se envian como regex en algunos metodos, asi que hay que utilizar caracteres de escape.
     private final String tagVersion = "\\{\\{\\¡VERSION\\¡\\}\\}";
     private final String tagPregunta = "\\{\\{\\¡PREGUNTA\\¡\\}\\}";
     private final String tagRespuestas = "\\{\\{\\¡RESPUESTAS\\¡\\}\\}";
@@ -38,7 +39,6 @@ public class LectorEscritorDeOdt {
     File fileCabecera;
     Path pathDirectorioDeSalida;
 
-    private static final Logger logger = LogManager.getLogger();
 
     /* Adaptaciones especiales */
     private boolean dificultadAdaptada;
@@ -50,16 +50,19 @@ public class LectorEscritorDeOdt {
 
 
     // Constructor
-    public LectorEscritorDeOdt(File banco, File cabecera, Path directorioAEscribir) {
+    public LectorEscritorDeOdt(File banco, File cabecera, Path directorioAEscribir, int nivelDeLog) throws Exception {
+        this.nivelDeLog = nivelDeLog;
         this.fileBanco = banco;
         this.fileCabecera = cabecera;
         this.pathDirectorioDeSalida = directorioAEscribir;
 
         try {
             documentoOdtBanco = OdfTextDocument.loadDocument(fileBanco);
-            logger.debug("Archivo leido: " + fileBanco);
+            if (nivelDeLog >= 4) {
+                System.out.println(ansi().render("@|cyan " + "Archivo leido: " + fileBanco + "|@"));
+            }
         } catch (Exception ex) {
-            logger.error("Error al leer el archivo .odt " + fileBanco.toString() + " " + ex.getMessage());
+            throw new Exception("Error al leer el banco de preguntas. " + ex.getMessage());
         }
 
     }
@@ -123,7 +126,7 @@ public class LectorEscritorDeOdt {
             parrafo.setImagenAncho(nodoDelFrame.getAttributes().getNamedItem("svg:width").getTextContent());
             parrafo.setImagenAlto(nodoDelFrame.getAttributes().getNamedItem("svg:height").getTextContent());
 
-            //añadimos las imagenes
+            //anadimos las imagenes
             NodeList nodosHijosDelFrame = nodoDelFrame.getChildNodes();
             for (int indexNodoHijoDelFrame = 0; indexNodoHijoDelFrame < nodosHijosDelFrame.getLength(); indexNodoHijoDelFrame++) {
                 if (nodosHijosDelFrame.item(indexNodoHijoDelFrame) instanceof OdfDrawImage) {
@@ -144,7 +147,7 @@ public class LectorEscritorDeOdt {
         for (Integer t : temas) {
             preguntasReturn.put(t, new ArrayList<>());
         }
-        Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para añadirla a la lista de preguntas
+        Pregunta preguntaTemp = null; // Guardamos la pregunta que encontramos para anadirla a la lista de preguntas
 
         boolean sigueBuscando = true; // Para salir de los bucles
         boolean textoEncontrado = false; // Para elegir caminos diferentes en los bucles
@@ -159,7 +162,7 @@ public class LectorEscritorDeOdt {
             documentoOdtBanco = OdfTextDocument.loadDocument(fileBanco);
             NodeList nodeTextPList = documentoOdtBanco.getContentRoot().getElementsByTagName("text:p"); // Buscamos nodos XML con esta etiqueta
             //////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // Recorremos todos los nodos del documento hasta que no queden más o hasta que encontremos las preguntas
+            // Recorremos todos los nodos del documento hasta que no queden mas o hasta que encontremos las preguntas
             // que hay en numerosDePregunta
             while ((indexNodo < nodeTextPList.getLength()) && !exito) {
                 /////////////////////////////////////////////////////////////
@@ -168,15 +171,19 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        // Eliminamos caracteres en blanco por delante y por detras de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if (lineaLeida.equals(tagPNoRegex)) {
                             exito = true;
                             sigueBuscando = false;
                         } else if (lineaLeida.equals(tagRNoRegex)) {
-                            logger.warn("El documento comienza con respuestas que no están asignadas a ninguna pregunta.");
+                            if (nivelDeLog >= 2) {
+                                System.out.println(ansi().render("@|yellow " + "El documento comienza con respuestas que no estan asignadas a ninguna pregunta." + "|@"));
+                            }
                         } else if (lineaLeida.equals(tagMNoRegex)) {
-                            logger.warn("El documento comienza con metadatos que no están asignados a ninguna pregunta.");
+                            if (nivelDeLog >= 2) {
+                                System.out.println(ansi().render("@|yellow " + "El documento comienza con metadatos que no estan asignados a ninguna pregunta." + "|@"));
+                            }
                         }
                     }
                 }
@@ -193,37 +200,39 @@ public class LectorEscritorDeOdt {
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
 
-                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        // Eliminamos caracteres en blanco por delante y por detras de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if ((!lineaLeida.equals("")) || tieneImagenes(nodo, 0)) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (textoEncontrado) {
-                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|cyan " + "Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                     exito = false;
                                     sigueBuscando = false;
                                 } else {
-                                    logger.warn("Varias etiquetas PREGUNTA seguidas");
+                                    if (nivelDeLog >= 2) {
+                                        System.out.println(ansi().render("@|yellow " + "Varias etiquetas PREGUNTA seguidas" + "|@"));
+                                    }
                                 }
                             } else if (lineaLeida.equals(tagRNoRegex)) {
                                 ////////////////////////////////
                                 // Tag de RESPUESTAS encontrado
                                 if (!textoEncontrado) {
-                                    logger.error("No se ha encontrado texto para una pregunta.");
+                                    System.out.println(ansi().render("@|red " + "No se ha encontrado texto para una pregunta." + "|@"));
                                 }
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagMNoRegex)) {
                                 if (textoEncontrado) {
-                                    logger.error("El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                     exito = false;
                                 } else {
-                                    logger.error("No se ha encontrado texto para una pregunta.");
+                                    System.out.println(ansi().render("@|red " + "No se ha encontrado texto para una pregunta." + "|@"));
                                 }
                                 sigueBuscando = false;
                             } else {
                                 if (textoEncontrado == false) {
                                     preguntaTemp = new Pregunta();
                                 }
-                                // Añadimos un nuevo parrafo
+                                // Anadimos un nuevo parrafo
                                 Parrafo parrafoTemp = new Parrafo();
                                 preguntaTemp.getParrafos().add(parrafoTemp);
                                 // Buscamos si tiene span o frames
@@ -247,7 +256,7 @@ public class LectorEscritorDeOdt {
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
                                     }
                                 }
-                                //si no tiene nodos textspan añadimos el texto del parrafo
+                                //si no tiene nodos textspan anadimos el texto del parrafo
                                 if (preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).getTextosSpan().size() == 0) {
                                     preguntaTemp.getParrafos().get(preguntaTemp.getParrafos().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
@@ -273,32 +282,36 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        // Eliminamos caracteres en blanco por delante y por detras de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if ((!lineaLeida.equals("")) || tieneImagenes(nodo, 0)) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 if (!textoEncontrado) {
-                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                 } else {
-                                    logger.error("Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                     exito = false;
                                 }
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagRNoRegex)) {
                                 if (!textoEncontrado) {
-                                    logger.warn("Varias etiquetas RESPUESTAS seguidas");
+                                    if (nivelDeLog >= 2) {
+                                        System.out.println(ansi().render("@|yellow " + "Varias etiquetas RESPUESTAS seguidas" + "|@"));
+                                    }
                                 } else {
-                                    logger.warn("Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    if (nivelDeLog >= 2) {
+                                        System.out.println(ansi().render("@|yellow " + "Etiqueta RESPUESTAS dentro de las respuestas de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
+                                    }
                                 }
                             } else if (lineaLeida.equals(tagMNoRegex)) {
                                 ////////////////////////////
                                 // Tag Metadatos encontrado
                                 if (!textoEncontrado) {
-                                    logger.error("Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "Pregunta sin respuestas: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                 }
                                 sigueBuscando = false;
                             } else {
-                                // Añadimos un nuevo parrafo
+                                // Anadimos un nuevo parrafo
                                 Parrafo parrafoTemp = new Parrafo();
                                 preguntaTemp.getRespuestasDePregunta().add(parrafoTemp);
                                 // Buscamos si tiene span o frames
@@ -322,7 +335,7 @@ public class LectorEscritorDeOdt {
                                                 add(ts.getAttributes().getNamedItem("text:style-name").getNodeValue());
                                     }
                                 }
-                                //si no tiene nodos textspan añadimos el texto del parrafo
+                                //si no tiene nodos textspan anadimos el texto del parrafo
                                 if (preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).getTextosSpan().size() == 0) {
                                     preguntaTemp.getRespuestasDePregunta().get(preguntaTemp.getRespuestasDePregunta().size() - 1).setTextoDeParrafo(parrafo.getTextContent());
                                 }
@@ -346,37 +359,41 @@ public class LectorEscritorDeOdt {
                     nodo = nodeTextPList.item(indexNodo);
                     if (nodo instanceof OdfTextParagraph) {
                         parrafo = (OdfTextParagraph) nodo;
-                        // Eliminamos caracteres en blanco por delante y por detrás de la cadena.
+                        // Eliminamos caracteres en blanco por delante y por detras de la cadena.
                         lineaLeida = parrafo.getTextContent().replaceAll("(^\\h*)|(\\h*$)", "");
                         if (!lineaLeida.equals("")) { // Si no es una linea con solo espacios
                             if (lineaLeida.equals(tagPNoRegex)) {
                                 ///////////////////////////
                                 // Tag PREGUNTA encontrado
                                 if (!textoEncontrado) {
-                                    logger.error("Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "Pregunta sin metadatos: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                 }
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagRNoRegex)) {
-                                logger.error("El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                System.out.println(ansi().render("@|red " + "El orden de las etiquetas debe ser: PREGUNTA, RESPUESTAS, METADATOS. Orden incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                 exito = false;
                                 sigueBuscando = false;
                             } else if (lineaLeida.equals(tagMNoRegex)) {
                                 ////////////////////////////
                                 // Tag Metadatos encontrado
                                 if (!textoEncontrado) {
-                                    logger.warn("Varias etiquetas METADATOS seguidas");
+                                    if (nivelDeLog >= 2) {
+                                        System.out.println(ansi().render("@|yellow " + "Varias etiquetas METADATOS seguidas" + "|@"));
+                                    }
                                 } else {
-                                    logger.warn("Etiqueta METADATOS dentro de los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    if (nivelDeLog >= 2) {
+                                        System.out.println(ansi().render("@|yellow " + "Etiqueta METADATOS dentro de los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
+                                    }
                                 }
                             } else {
-                                // Añadimos un nuevo metadato
+                                // Anadimos un nuevo metadato
                                 if (lineaLeida.split(" ").length > 1) {
                                     preguntaTemp.getMetadatos().put(lineaLeida.split(" ")[0].toLowerCase(Locale.ROOT), lineaLeida.split(" ")[1].toLowerCase(Locale.ROOT));
 
                                     textoEncontrado = true;
                                     exito = true;
                                 } else {
-                                    logger.error("Los metadatos deben tener el formato nombre valor separados por espacio. Formato incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                                    System.out.println(ansi().render("@|red " + "Los metadatos deben tener el formato nombre valor separados por espacio. Formato incorrecto en la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                                     exito = false;
                                     sigueBuscando = false;
                                 }
@@ -388,26 +405,26 @@ public class LectorEscritorDeOdt {
                     return null;
                 }
 
-                // Si la pregunta tiene el tema y la dificultad que queremos, la añadimos
+                // Si la pregunta tiene el tema y la dificultad que queremos, la anadimos
                 int temaTemp = -1;
                 int difTemp = -1;
                 try {
                     if (preguntaTemp.getMetadatos().get("tema") != null) {
                         temaTemp = Integer.valueOf(preguntaTemp.getMetadatos().get("tema"));
                     } else {
-                        logger.error("La pregunta no tiene metadato tema: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                        System.out.println(ansi().render("@|red " + "La pregunta no tiene metadato tema: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                         return null;
                     }
                     if (this.dificultadAdaptada) {
                         if (preguntaTemp.getMetadatos().get("dificultad") != null) {
                             difTemp = Integer.valueOf(preguntaTemp.getMetadatos().get("dificultad"));
                         } else {
-                            logger.error("La pregunta no tiene metadato dificultad: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                            System.out.println(ansi().render("@|red " + "La pregunta no tiene metadato dificultad: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                             return null;
                         }
                     }
                 } catch (Exception e) {
-                    logger.error("Error leyendo los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
+                    System.out.println(ansi().render("@|red " + "Error leyendo los metadatos de la pregunta: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
                     return null;
                 }
 
@@ -420,20 +437,20 @@ public class LectorEscritorDeOdt {
                 ) {
                     preguntasReturn.get(Integer.valueOf(preguntaTemp.getMetadatos().get("tema"))).add(preguntaTemp);
 
-                    // para debug
-                    int contadorDeRespuestas = 1;
-                    logger.debug("Pregunta añadida: " + preguntaTemp.getParrafos().get(0).getTextoTotal());
-                    if (!preguntaTemp.getParrafos().get(0).getImagenRuta().equals("")) {
-                        logger.debug("(imagen)");
-                    }
-                    for (Parrafo r : preguntaTemp.getRespuestasDePregunta()) {
-                        logger.debug("Añadida respuesta " + contadorDeRespuestas + ": " + r.getTextoTotal());
-                        if (!r.getImagenRuta().equals("")) {
-                            logger.debug("(imagen)");
+                    if (nivelDeLog >= 4) {
+                        int contadorDeRespuestas = 1;
+                        System.out.println(ansi().render("@|cyan " + "Pregunta anadida: " + preguntaTemp.getParrafos().get(0).getTextoTotal() + "|@"));
+                        if (!preguntaTemp.getParrafos().get(0).getImagenRuta().equals("")) {
+                            System.out.println(ansi().render("@|cyan " + "(imagen)" + "|@"));
                         }
-                        contadorDeRespuestas++;
+                        for (Parrafo r : preguntaTemp.getRespuestasDePregunta()) {
+                            System.out.println(ansi().render("@|cyan " + "Anadida respuesta " + contadorDeRespuestas + ": " + r.getTextoTotal() + "|@"));
+                            if (!r.getImagenRuta().equals("")) {
+                                System.out.println(ansi().render("@|cyan " + "(imagen)" + "|@"));
+                            }
+                            contadorDeRespuestas++;
+                        }
                     }
-                    //end para debug
                 }
 
                 // seguimos buscando
@@ -448,7 +465,7 @@ public class LectorEscritorDeOdt {
             }
         } catch (
                 Exception ex) {
-            logger.error("Error obteniendo preguntas: " + ex.getMessage());
+            System.out.println(ansi().render("@|red " + "Error obteniendo preguntas: " + ex.getMessage() + "|@"));
             preguntasReturn = null;
         }
 
@@ -470,9 +487,11 @@ public class LectorEscritorDeOdt {
                 search.next();
                 numPreguntas++;
             }
-            logger.debug("Número de preguntas: " + numPreguntas);
+            if (nivelDeLog >= 4) {
+                System.out.println(ansi().render("@|cyan " + "Numero de preguntas: " + numPreguntas + "|@"));
+            }
         } catch (Exception ex) {
-            logger.error("Error obteniendo número de preguntas: " + ex.getMessage());
+            System.out.println(ansi().render("@|red " + "Error obteniendo numero de preguntas: " + ex.getMessage() + "|@"));
         }
 
         return numPreguntas;
@@ -489,9 +508,9 @@ public class LectorEscritorDeOdt {
                     return (antiguoNombre + i);
                 }
             }
-            logger.error("No se ha podido crear el nuevo estilo, hay demasiados estilos con el mismo nombre. Nombre del estilo: " + antiguoNombre);
+            System.out.println(ansi().render("@|red " + "No se ha podido crear el nuevo estilo, hay demasiados estilos con el mismo nombre. Nombre del estilo: " + antiguoNombre + "|@"));
         } catch (Exception e) {
-            logger.error("Error leyendo los estilos. " + e.getMessage());
+            System.out.println(ansi().render("@|red " + "Error leyendo los estilos. " + e.getMessage() + "|@"));
         }
         return "";
     }
@@ -511,20 +530,22 @@ public class LectorEscritorDeOdt {
                     return (nombreSinExtension + i + "." + extension);
                 }
             }
-            logger.error("No se ha podido insertar la nueva imagen, hay demasiadas imagenes con el mismo nombre. Nombre de la imagen: " + antiguoNombre);
+            System.out.println(ansi().render("@|red " + "No se ha podido insertar la nueva imagen, hay demasiadas imagenes con el mismo nombre. Nombre de la imagen: " + antiguoNombre + "|@"));
         } catch (Exception e) {
-            logger.error("Error leyendo las imagenes. " + e.getMessage());
+            System.out.println(ansi().render("@|red " + "Error leyendo las imagenes. " + e.getMessage() + "|@"));
         }
         return "";
     }
 
-    // Cambia el tamaño de letra del documento
+    // Cambia el tamano de letra del documento
     private void cambiarTamanioDeLetra(org.odftoolkit.odfdom.dom.OdfContentOrStylesDomBase dom, int tamanio, String nombre) {
         for (int indexEstilo = 0; indexEstilo < dom.getElementsByTagName("style:text-properties").getLength(); indexEstilo++) {
             Node propDeEstilo = dom.getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("fo:font-size");
             if (propDeEstilo != null) {
                 if (Integer.valueOf(propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2)) < tamanio) {
-                    logger.debug("Estilo con tamaño de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al " + nombre + ", " + tamanio + ".");
+                    if (nivelDeLog >= 4) {
+                        System.out.println(ansi().render("@|cyan " + "Estilo con tamano de letra " + propDeEstilo.getTextContent().substring(0, propDeEstilo.getTextContent().length() - 2) + ". Se va a cambiar al " + nombre + ", " + tamanio + "." + "|@"));
+                    }
                     propDeEstilo.setNodeValue(tamanio + "pt");
                     propDeEstilo = dom.getElementsByTagName("style:text-properties").item(indexEstilo).getAttributes().getNamedItem("style:font-size-asian");
                     if (propDeEstilo != null) {
@@ -544,9 +565,11 @@ public class LectorEscritorDeOdt {
 
         try {
             documentoOdtCabecera = OdfTextDocument.loadDocument(fileCabecera);
-            logger.debug("Archivo leido: " + fileCabecera);
+            if (nivelDeLog >= 4) {
+                System.out.println(ansi().render("@|cyan " + "Archivo leido: " + fileCabecera + "|@"));
+            }
         } catch (Exception ex) {
-            logger.error("Error al leer el archivo .odt " + fileCabecera.toString() + " " + ex.getMessage());
+            System.out.println(ansi().render("@|red " + "Error al leer la plantilla. " + ex.getMessage() + "|@"));
             return false;
         }
 
@@ -628,7 +651,7 @@ public class LectorEscritorDeOdt {
             numeracionListaRespuestas.setTextStyleNameAttribute(estiloNumeracionListaPreguntas.getStyleNameAttribute());
 
             //////////////////////////
-            // Añadimos las preguntas
+            // Anadimos las preguntas
             // creamos el elemento lista
             org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDePreguntas = documentoOdtCabecera.getContentRoot().newTextListElement();
             elementoListaDePreguntas.setTextContinueNumberingAttribute(true);
@@ -642,7 +665,7 @@ public class LectorEscritorDeOdt {
                     //creamos el parrafo
                     OdfTextParagraph parrafo = documentoOdtCabecera.newParagraph();
 
-                    //si tiene spans los añadimos
+                    //si tiene spans los anadimos
                     for (int i2 = 0; i2 < p.getParrafos().get(i).getTextosSpan().size(); i2++) {
                         //creamos el estilo del span
                         // cambiamos los nombres de los estilos para que no se sobreescriban
@@ -657,7 +680,7 @@ public class LectorEscritorDeOdt {
                         //creamos el nodo span
                         TextSpanElement ts = parrafo.newTextSpanElement();
 
-                        //añadimos el texto de la pregunta
+                        //anadimos el texto de la pregunta
                         ts.setTextContent(p.getParrafos().get(i).getTextosSpan().get(i2));
 
                         //le ponemos el estilo al span
@@ -686,11 +709,11 @@ public class LectorEscritorDeOdt {
                     estiloDeParrafo.setProperty(OdfParagraphProperties.LineHeight, "107%");
                     estiloDeParrafo.setProperty(OdfParagraphProperties.TextIndent, "-6.29666mm");
 
-                    //lo añadimos al elemento en la lista de preguntas
+                    //lo anadimos al elemento en la lista de preguntas
                     nuevoElementoEnLaListaDePreguntas.appendChild(parrafo);
 
                     //////////////////////////////////
-                    //si tiene una imagen la añadimos
+                    //si tiene una imagen la anadimos
                     if (!p.getParrafos().get(i).getImagenRuta().equals("")) {
                         //creamos el parrafo
                         OdfTextParagraph parrafoDeImagen = documentoOdtCabecera.newParagraph();
@@ -714,7 +737,7 @@ public class LectorEscritorDeOdt {
                         imagenDelFrame.setXlinkShowAttribute("embed");
                         imagenDelFrame.setXlinkActuateAttribute("onLoad");
 
-                        //lo añadimos al elemento en la lista de preguntas
+                        //lo anadimos al elemento en la lista de preguntas
                         nuevoElementoEnLaListaDePreguntas.appendChild(parrafoDeImagen);
 
                         //le aplicamos el estilo al parrafo
@@ -726,7 +749,7 @@ public class LectorEscritorDeOdt {
                 }
 
                 //////////////////////////
-                //Añadimos las respuestas
+                //Anadimos las respuestas
                 //creamos el elemento lista
                 org.odftoolkit.odfdom.dom.element.text.TextListElement elementoListaDeRespuestas = documentoOdtCabecera.getContentRoot().newTextListElement();
                 elementoListaDePreguntas.getLastChild().appendChild(elementoListaDeRespuestas);
@@ -751,7 +774,7 @@ public class LectorEscritorDeOdt {
                         //creamos el nodo span
                         TextSpanElement ts = parrafo.newTextSpanElement();
 
-                        //añadimos el texto de la respuesta
+                        //anadimos el texto de la respuesta
                         ts.setTextContent(p.getRespuestasDePregunta().get(i).getTextosSpan().get(i2));
 
                         //le aplicamos el estilo
@@ -783,7 +806,7 @@ public class LectorEscritorDeOdt {
                     nuevoElementoEnLaListaDeRespuestas.appendChild(parrafo);
 
                     //////////////////////////////////
-                    //si tiene una imagen la añadimos
+                    //si tiene una imagen la anadimos
                     if (!p.getRespuestasDePregunta().get(i).getImagenRuta().equals("")) {
                         //creamos el parrafo
                         OdfTextParagraph parrafoDeImagen = documentoOdtCabecera.newParagraph();
@@ -807,7 +830,7 @@ public class LectorEscritorDeOdt {
                         imagenDelFrame.setXlinkShowAttribute("embed");
                         imagenDelFrame.setXlinkActuateAttribute("onLoad");
 
-                        //lo añadimos al elemento en la lista de preguntas
+                        //lo anadimos al elemento en la lista de preguntas
                         nuevoElementoEnLaListaDeRespuestas.appendChild(parrafoDeImagen);
 
                         //le aplicamos el estilo al parrafo
@@ -819,7 +842,7 @@ public class LectorEscritorDeOdt {
                 }
             }
 
-            //aplicamos el tamaño minimo de letra si es necesario
+            //aplicamos el tamano minimo de letra si es necesario
             //para estilos
             cambiarTamanioDeLetra(documentoOdtCabecera.getStylesDom(), this.tamanioMinimoDeLetra, "minimo");
             //para elementos
@@ -831,11 +854,13 @@ public class LectorEscritorDeOdt {
             // sin adaptar
             File documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + e.getVersion() + ".odt").toString());
             documentoOdtCabecera.save(documentoExamen);
-            logger.info("Examen guardado: Version " + e.getVersion() + " en: " + documentoExamen);
+            if (nivelDeLog >= 3) {
+                System.out.println(ansi().render("@|green " + "Examen guardado: Version " + e.getVersion() + " en: " + documentoExamen + "|@"));
+            }
 
             //adaptado
             if (this.tamanioDeLetraAdaptadoSiNo) {
-                //aplicamos el tamaño adaptado de letra si es necesario
+                //aplicamos el tamano adaptado de letra si es necesario
                 //para estilos
                 cambiarTamanioDeLetra(documentoOdtCabecera.getStylesDom(), this.tamanioDeLetraAdaptado, "adaptado");
                 //para elementos
@@ -845,11 +870,12 @@ public class LectorEscritorDeOdt {
                 e.setVersion(e.getVersion() + "_ad");
                 documentoExamen = new File(pathDirectorioDeSalida.resolve("examen_version_" + e.getVersion() + ".odt").toString());
                 documentoOdtCabecera.save(documentoExamen);
-                logger.info("Examen guardado: Version " + e.getVersion() + " con tamaño de letra: " + this.tamanioDeLetraAdaptado + " en: " + documentoExamen);
+                if (nivelDeLog >= 3) {
+                    System.out.println(ansi().render("@|green " + "Examen guardado: Version " + e.getVersion() + " con tamano de letra: " + this.tamanioDeLetraAdaptado + " en: " + documentoExamen + "|@"));
+                }
             }
-
         } catch (Exception ex) {
-            logger.error("Error guardando examen: " + ex.getMessage());
+            System.out.println(ansi().render("@|red " + "Error guardando examen: " + ex.getMessage() + "|@"));
         }
 
         return true;
