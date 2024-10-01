@@ -1,5 +1,3 @@
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,6 +11,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Random;
 
+import static org.fusesource.jansi.Ansi.ansi;
+
 public class Generador {
 
     /* Ajustes generales */
@@ -21,40 +21,42 @@ public class Generador {
     private File bancoDePreguntas;
     private final String stringAjusteBancoDePreguntas = "Archivo del banco de preguntas";
     private Path directorioSalida;
-    private final String stringAjusteDirectorioSalida = "Directorio para guardar los exámenes";
+    private final String stringAjusteDirectorioSalida = "Directorio para guardar los examenes";
 
 
     /* Ajustes de examen */
     private int numMaxDeVersiones;
-    private final String stringAjusteNumMaxDeVersiones = "Número máximo de versiones";
+    private final String stringAjusteNumMaxDeVersiones = "Numero maximo de versiones";
     private ArrayList<Integer> temas = new ArrayList<>();
     private final String stringAjusteTemas = "Temas a incluir (separados por comas)";
     private int numPreguntas;
-    private final String stringAjusteNumPreguntas = "Número de preguntas";
+    private final String stringAjusteNumPreguntas = "Numero de preguntas";
 
     /* Adaptaciones especiales */
     private boolean dificultadAdaptada;
     private final String stringAjusteDificultadAdaptada = "Dificultad adaptada";
     private int dificultadMinima;
-    private final String stringAjusteDificultadMinima = "Dificultad adaptada mínima";
+    private final String stringAjusteDificultadMinima = "Dificultad adaptada minima";
     private int dificultadMaxima;
-    private final String stringAjusteDificultadMaxima = "Dificultad adaptada máxima";
+    private final String stringAjusteDificultadMaxima = "Dificultad adaptada maxima";
     private boolean tamanioDeLetraAdaptadoSiNo;
-    private final String stringAjusteTamanioDeLetraAdaptadoSiNo = "Tamaño de letra adaptado si/no";
+    private final String stringAjusteTamanioDeLetraAdaptadoSiNo = "Tamano de letra adaptado si/no";
     private int tamanioDeLetraAdaptado;
-    private final String stringAjusteTamanioDeLetraAdaptado = "Tamaño de letra adaptado";
+    private final String stringAjusteTamanioDeLetraAdaptado = "Tamano de letra adaptado";
     private int tamanioMinimoDeLetra;
-    private final String stringAjusteTamanioMinimoDeLetra = "Tamaño mínimo de letra";
+    private final String stringAjusteTamanioMinimoDeLetra = "Tamano minimo de letra";
 
 
-    // Logger para mostrar mensajes al usuario
-    private static final Logger logger = LogManager.getLogger();
+    // Para mostrar mensajes al usuario
+    private int nivelDeLog = 3;
     private static final String lineaDeGuiones = "------------------------------------------------------";
     private static final char[] letrasDeVersiones = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
             'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
 
     // Constructor por defecto
-    public Generador() {
+    public Generador(int nivelDeLog) {
+        // Nivel de mensajes de registro
+        this.nivelDeLog = nivelDeLog;
         // Cargamos la configuracion
         cargarConfiguracion();
 
@@ -63,7 +65,10 @@ public class Generador {
     // Cargar archivo de configuracion inicial
     private void cargarConfiguracion() {
         if (!Files.exists(Paths.get("GeneradorConfiguracion.txt"))) {
-            logger.warn("Creando archivo de configuración: GeneradorConfiguracion.txt");
+            if (nivelDeLog >= 2) {
+                System.out.println(ansi().render("@|yellow Creando archivo de configuracion: GeneradorConfiguracion.txt|@"));
+            }
+
             try {
                 FileWriter fw = new FileWriter("GeneradorConfiguracion.txt");
                 fw.write("*****************************************************************\n");
@@ -71,29 +76,29 @@ public class Generador {
                 fw.write("*****************************************************************\n");
                 fw.write("Archivo de plantilla \t\t\t= Plantilla.odt\n");
                 fw.write("Archivo del banco de preguntas \t\t= Banco_De_Preguntas.odt\n");
-                fw.write("Directorio para guardar los exámenes \t= examenes_generados\n");
+                fw.write("Directorio para guardar los examenes \t= examenes_generados\n");
                 fw.write("\n");
                 fw.write("*****************************************************************\n");
-                fw.write("*\t\t\tAjustes de exámen\t\t\t*\n");
+                fw.write("*\t\t\tAjustes de examen\t\t\t*\n");
                 fw.write("*****************************************************************\n");
-                fw.write("Número máximo de versiones            =  4\n");
+                fw.write("Numero maximo de versiones            =  4\n");
                 fw.write("Temas a incluir (separados por comas) =  1,2,3,4,5,6,7,8,9,10\n");
-                fw.write("Número de preguntas                   =  15\n");
+                fw.write("Numero de preguntas                   =  15\n");
                 fw.write("\n");
                 fw.write("*****************************************************************\n");
                 fw.write("*\t\t     Adaptaciones especiales\t\t\t*\n");
                 fw.write("*****************************************************************\n");
                 fw.write("Dificultad adaptada        \t= no\n");
-                fw.write("Dificultad adaptada mínima \t= 60\n");
-                fw.write("Dificultad adaptada máxima \t= 70\n");
-                fw.write("Tamaño de letra adaptado si/no \t= si\n");
-                fw.write("Tamaño de letra adaptado       \t= 11\n");
-                fw.write("Tamaño mínimo de letra         \t= 9\n");
+                fw.write("Dificultad adaptada minima \t= 60\n");
+                fw.write("Dificultad adaptada maxima \t= 70\n");
+                fw.write("Tamano de letra adaptado si/no \t= si\n");
+                fw.write("Tamano de letra adaptado       \t= 11\n");
+                fw.write("Tamano minimo de letra         \t= 9\n");
 
                 fw.flush();
                 fw.close();
             } catch (Exception e) {
-                logger.error("Error creando archivo de configuración. " + e.getMessage());
+                System.out.println(ansi().render("@|red Error creando archivo de configuracion." + e.getMessage() + "|@"));
             }
         }
 
@@ -135,9 +140,9 @@ public class Generador {
                 }
             }
         } catch (Exception e) {
-            logger.error("Error al leer el archivo de configuracion: " + e.getMessage());
-            logger.error("Ultima linea leida: " + linea);
-            logger.error("Usando valores por defecto");
+            System.out.println(ansi().render("@|red Error al leer el archivo de configuracion: " + e.getMessage() + "|@"));
+            System.out.println(ansi().render("@|red Ultima linea leida: " + linea + "|@"));
+            System.out.println(ansi().render("@|red Usando valores por defecto|@"));
 
             plantilla = new File("Plantilla.odt");
             bancoDePreguntas = new File("Banco_De_Preguntas.odt");
@@ -162,29 +167,39 @@ public class Generador {
 
     //Imprime la configuracion cargada al usuario
     private void imprimirConfiguracion() {
-        logger.info(lineaDeGuiones);
-        logger.info("Configuración cargada con los siguientes valores:");
-        logger.info(lineaDeGuiones);
-        logger.info(stringAjustePlantilla + " : " + plantilla);
-        logger.info(stringAjusteBancoDePreguntas + " : " + bancoDePreguntas);
-        logger.info(stringAjusteDirectorioSalida + " : " + directorioSalida);
-        logger.info(stringAjusteNumMaxDeVersiones + " : " + numMaxDeVersiones);
-        for (int i = 0; i < temas.size(); i++)
-            logger.info(stringAjusteTemas + " : " + temas.get(i));
-        logger.info(stringAjusteNumPreguntas + " : " + numPreguntas);
-        logger.info(stringAjusteDificultadAdaptada + " : " + dificultadAdaptada);
-        logger.info(stringAjusteDificultadMinima + " : " + dificultadMinima);
-        logger.info(stringAjusteDificultadMaxima + " : " + dificultadMaxima);
-        logger.info(stringAjusteTamanioDeLetraAdaptadoSiNo + " : " + tamanioDeLetraAdaptadoSiNo);
-        logger.info(stringAjusteTamanioDeLetraAdaptado + " : " + tamanioDeLetraAdaptado);
-        logger.info(stringAjusteTamanioMinimoDeLetra + " : " + tamanioMinimoDeLetra);
-        logger.info(lineaDeGuiones);
+        if (nivelDeLog >= 3) {
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+            System.out.println(ansi().render("@|green Configuracion cargada con los siguientes valores:|@"));
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjustePlantilla + " : " + plantilla + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteBancoDePreguntas + " : " + bancoDePreguntas + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteDirectorioSalida + " : " + directorioSalida + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteNumMaxDeVersiones + " : " + numMaxDeVersiones + "|@"));
+            for (int i = 0; i < temas.size(); i++)
+                System.out.println(ansi().render("@|green " + stringAjusteTemas + " : " + temas.get(i) + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteNumPreguntas + " : " + numPreguntas + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteDificultadAdaptada + " : " + dificultadAdaptada + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteDificultadMinima + " : " + dificultadMinima + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteDificultadMaxima + " : " + dificultadMaxima + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteTamanioDeLetraAdaptadoSiNo + " : " + tamanioDeLetraAdaptadoSiNo + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteTamanioDeLetraAdaptado + " : " + tamanioDeLetraAdaptado + "|@"));
+            System.out.println(ansi().render("@|green " + stringAjusteTamanioMinimoDeLetra + " : " + tamanioMinimoDeLetra + "|@"));
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+        }
     }
 
+
     //Genera los examenes, los mezcla y los guarda
-    public void generar() {
+    public void generar() throws Exception {
         Random random = new Random();
-        LectorEscritorDeOdt lectorEscritorDeOdt = new LectorEscritorDeOdt(bancoDePreguntas, plantilla, directorioSalida);
+        LectorEscritorDeOdt lectorEscritorDeOdt;
+        try {
+            lectorEscritorDeOdt = new LectorEscritorDeOdt(bancoDePreguntas, plantilla, directorioSalida, nivelDeLog);
+        } catch (Exception e) {
+            System.out.println(ansi().render("@|red " + e.getMessage() + "|@"));
+            return;
+        }
+
 
         //Ponemos los ajustes de adaptaciones especiales al lector de odt
         lectorEscritorDeOdt.setDificultadAdaptada(this.dificultadAdaptada);
@@ -194,17 +209,17 @@ public class Generador {
         lectorEscritorDeOdt.setTamanioDeLetraAdaptado(this.tamanioDeLetraAdaptado);
         lectorEscritorDeOdt.setTamanioMinimoDeLetra(this.tamanioMinimoDeLetra);
 
-        ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los exámenes generados.
+        ArrayList<Examen> examenes = new ArrayList<>(); // Donde guardamos los examenes generados.
         HashMap<Integer, ArrayList<Pregunta>> preguntasPorTemas; // Donde guardamos todas las preguntas del banco que cumplen las condiciones
         ArrayList<Pregunta> preguntasParaMezclar = new ArrayList<>(); // Donde guardamos las preguntas para mezclarlas
         int numPreguntasDelBanco = lectorEscritorDeOdt.obtenerNumPreguntas(); // Numero de preguntas que hay en el banco
 
         if (numPreguntasDelBanco < numPreguntas) {
-            logger.error("No hay tantas preguntas en el banco de preguntas.");
+            System.out.println(ansi().render("@|red " + "No hay tantas preguntas en el banco de preguntas." + "|@"));
             return;
         }
 
-        //Obtenemos sólo las preguntas del banco de preguntas que cumplen las condiciones
+        //Obtenemos solo las preguntas del banco de preguntas que cumplen las condiciones
         preguntasPorTemas = lectorEscritorDeOdt.obtenerPreguntas(this.temas);
 
         if (preguntasPorTemas == null) {
@@ -215,13 +230,15 @@ public class Generador {
         int nPTemp = 0;
         for (Integer clave : preguntasPorTemas.keySet()) {
             if (preguntasPorTemas.get(clave).size() == 0) {
-                logger.warn("No se han encontrado preguntas del tema " + clave + " que cumplan los requisitos.");
+                if (nivelDeLog >= 2) {
+                    System.out.println(ansi().render("@|yellow " + "No se han encontrado preguntas del tema " + clave + " que cumplan los requisitos." + "|@"));
+                }
             } else {
                 nPTemp = nPTemp + preguntasPorTemas.get(clave).size();
             }
         }
         if (nPTemp < numPreguntas) {
-            logger.error("No se han encontrado " + numPreguntas + " preguntas que cumplan los requisitos.");
+            System.out.println(ansi().render("@|red " + "No se han encontrado " + numPreguntas + " preguntas que cumplan los requisitos." + "|@"));
             return;
         }
 
@@ -232,13 +249,13 @@ public class Generador {
             //si ya hemos cogido preguntas de todos los temas
             if (temasCandidatos.size() == 0) {
                 for (Integer tema : preguntasPorTemas.keySet()) {
-                    //si quedan preguntas de ese tema lo añadimos
+                    //si quedan preguntas de ese tema lo anadimos
                     if (preguntasPorTemas.get(tema).size() != 0) {
                         temasCandidatos.add(tema);
                     }
                 }
             }
-            // Añadimos la pregunta a la lista de preguntas que queremos
+            // Anadimos la pregunta a la lista de preguntas que queremos
             int TcandidatoIndex = random.nextInt(0, temasCandidatos.size());
             Integer Tcandidato = temasCandidatos.get(TcandidatoIndex);
             int Pcandidata = random.nextInt(0, preguntasPorTemas.get(Tcandidato).size());
@@ -252,12 +269,12 @@ public class Generador {
         }
 
         ////////////////////////////////////////////////////
-        // Calculamos el número de versiones que va a haber.
+        // Calculamos el numero de versiones que va a haber.
         // Para sacar el numero de versiones tenemos que saber cuantas respuestas tienen las preguntas
         // No podemos suponer que todas tienen 4 porque si hay una con 3, no vamos a poder hacer las mismas versiones,
-        // así que nos quedamos con el mínimo valor.
-        int numeroMinRespuestas = 0; // Donde guardamos el numero de respuestas mínimo de las preguntas que hemos seleccionado
-        // Recorremos la lista de preguntas seleccionadas y miramos su número de respuestas
+        // asi que nos quedamos con el minimo valor.
+        int numeroMinRespuestas = 0; // Donde guardamos el numero de respuestas minimo de las preguntas que hemos seleccionado
+        // Recorremos la lista de preguntas seleccionadas y miramos su numero de respuestas
         for (int i = 0; i < preguntasParaMezclar.size(); i++) {
             if (numeroMinRespuestas == 0) {
                 numeroMinRespuestas = preguntasParaMezclar.get(i).getRespuestasDePregunta().size();
@@ -272,19 +289,23 @@ public class Generador {
         //si es tipo test
         if (numeroMinRespuestas == 2) {
             numVersionesDiferentes = preguntasParaMezclar.size();
-            logger.info("Como es un exámen con preguntas tipo test, no se tendrá en cuenta si se repiten las respuestas.");
+            if (nivelDeLog >= 3) {
+                System.out.println(ansi().render("@|green " + "Como es un examen con preguntas tipo test, no se tendra en cuenta si se repiten las respuestas." + "|@"));
+            }
         } else {
             numVersionesDiferentes = numeroMinRespuestas;
         }
-        logger.info("Las preguntas seleccionadas permiten un máximo de " + numVersionesDiferentes + " versiones diferentes.");
-        logger.info("Has seleccionado un máximo de " + numMaxDeVersiones + " versiones diferentes.");
+        if (nivelDeLog >= 3) {
+            System.out.println(ansi().render("@|green " + "Las preguntas seleccionadas permiten un maximo de " + numVersionesDiferentes + " versiones diferentes." + "|@"));
+            System.out.println(ansi().render("@|green " + "Has seleccionado un maximo de " + numMaxDeVersiones + " versiones diferentes." + "|@"));
+        }
 
         if (numMaxDeVersiones < numVersionesDiferentes) {
             numVersionesDiferentes = numMaxDeVersiones;
         }
 
         ////////////////////////////////////////////////
-        // Comenzamos con la generación de los exámenes
+        // Comenzamos con la generacion de los examenes
         Examen examenTemp;
         // Para cada version
         for (int indexExamen = 0; indexExamen < numVersionesDiferentes; indexExamen++) {
@@ -294,45 +315,54 @@ public class Generador {
             for (Pregunta p : preguntasParaMezclar) {
                 examenTemp.getGrupoDePreguntas().add(p.obtenerCopiaRecursiva());
             }
-            logger.debug("Examen creado con version: " + examenTemp.getVersion());
+            if (nivelDeLog >= 4) {
+                System.out.println(ansi().render("@|cyan " + "Examen creado con version: " + examenTemp.getVersion() + "|@"));
+            }
 
-            // Lo incluimos en la lista de exámenes generados.
+            // Lo incluimos en la lista de examenes generados.
             examenes.add(examenTemp);
         }
 
         // Los mezclamos
         mezclarExamenes(examenes);
 
-        // Para debug
-        for (int i = 0; i < examenes.size(); i++) {
-            logger.trace(lineaDeGuiones);
-            logger.trace("Exámen: " + i);
-            logger.trace("Version: " + examenes.get(i).getVersion());
-            logger.trace("Preguntas:");
-            for (int j = 0; j < examenes.get(i).getGrupoDePreguntas().size(); j++) {
-                logger.trace("Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal());
-                if (!examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getImagenRuta().equals("")) {
-                    logger.trace("(imagen)");
-                }
-                for (int k = 0; k < examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().size(); k++) {
-                    logger.trace("Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal());
-                    if (!examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getImagenRuta().equals("")) {
-                        logger.trace("(imagen)");
+        if (nivelDeLog >= 5) {
+            for (int i = 0; i < examenes.size(); i++) {
+                System.out.println(ansi().render("@|cyan " + lineaDeGuiones + "|@"));
+                System.out.println(ansi().render("@|cyan " + "Examen: " + i + "|@"));
+                System.out.println(ansi().render("@|cyan " + "Version: " + examenes.get(i).getVersion() + "|@"));
+                System.out.println(ansi().render("@|cyan " + "Preguntas:" + "|@"));
+                for (int j = 0; j < examenes.get(i).getGrupoDePreguntas().size(); j++) {
+                    System.out.println(ansi().render("@|cyan " + "Pregunta: " + j + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getTextoTotal() + "|@"));
+                    if (!examenes.get(i).getGrupoDePreguntas().get(j).getParrafos().get(0).getImagenRuta().equals("")) {
+                        System.out.println(ansi().render("@|cyan " + "(imagen)" + "|@"));
+                    }
+                    for (int k = 0; k < examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().size(); k++) {
+                        System.out.println(ansi().render("@|cyan " + "Respuesta: " + k + " : " + examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getTextoTotal() + "|@"));
+                        if (!examenes.get(i).getGrupoDePreguntas().get(j).getRespuestasDePregunta().get(k).getImagenRuta().equals("")) {
+                            System.out.println(ansi().render("@|cyan " + "(imagen)" + "|@"));
+                        }
                     }
                 }
             }
+            System.out.println(ansi().render("@|cyan " + lineaDeGuiones + "|@"));
         }
-        logger.trace(lineaDeGuiones);
-        /////////////
 
         //Guardamos los examenes
-        logger.info(lineaDeGuiones);
-        logger.info("Guardando exámenes");
-        logger.info(lineaDeGuiones);
+        if (nivelDeLog >= 3) {
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+            System.out.println(ansi().render("@|green " + "Guardando examenes" + "|@"));
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+        }
         for (Examen e : examenes) {
             if (!lectorEscritorDeOdt.guardarExamen(e)) {
                 return;
             }
+        }
+
+        if (nivelDeLog >= 3) {
+            System.out.println(ansi().render("@|green " + lineaDeGuiones + "|@"));
+            System.out.println(ansi().render("@|green Generacion terminada |@"));
         }
 
     }
@@ -419,7 +449,7 @@ public class Generador {
     // Obtiene la letra de la version
     private String obtenerVersion(int numero, int nvers) {
         StringBuilder resultado = new StringBuilder();
-        // Si solo hay una letra de versión
+        // Si solo hay una letra de version
         if (letrasDeVersiones.length == 1) {
             for (int i = 0; i < numero; i++) {
                 resultado.append(letrasDeVersiones[0]);
@@ -458,7 +488,9 @@ public class Generador {
             }
         }
 
-        logger.debug("Numero de letras para la version: " + numLetras);
+        if (nivelDeLog >= 4) {
+            System.out.println(ansi().render("@|cyan " + "Numero de letras para la version: " + numLetras + "|@"));
+        }
         return numLetras;
     }
 
